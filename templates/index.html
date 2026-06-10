@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{% if search %}搜索"{{ search }}" - {% endif %}火影忍者手游论坛{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>🍥 火影忍者手游论坛</h1>
+        <span class="subtitle">忍者们，畅所欲言！</span>
+    </div>
+    {% if current_user %}
+        <a href="{{ url_for('create_post') }}" class="btn btn-primary">+ 发布新帖</a>
+    {% endif %}
+</div>
+
+<!-- 搜索框 -->
+<form class="search-box" method="GET" action="{{ url_for('index') }}">
+    <input type="text" name="q" placeholder="搜索帖子..." value="{{ search }}">
+    <button type="submit">搜索</button>
+    {% if search %}
+        <a href="{{ url_for('index') }}" class="btn btn-outline">取消</a>
+    {% endif %}
+</form>
+
+<!-- 帖子列表 -->
+{% if posts %}
+    {% for post in posts %}
+        <div class="post-card {% if post.is_pinned %}pinned{% endif %}">
+            <div class="post-header">
+                {% if post.is_pinned %}<span class="pin-badge">📌 置顶</span>{% endif %}
+            </div>
+            <a href="{{ url_for('view_post', post_id=post.id) }}" class="post-title">
+                {{ post.title }}
+            </a>
+            <div class="post-content">
+                {{ post.content[:200] }}{% if post.content|length > 200 %}...{% endif %}
+            </div>
+            <div class="post-meta">
+                <div class="meta-left">
+                    <span>👤 {{ post.username }}</span>
+                    <span>🕐 {{ post.created_at }}</span>
+                </div>
+                <div class="meta-right">
+                    <span>👁️ {{ post.view_count }}</span>
+                    <span>💬 {{ post.comment_count }}</span>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🍃</div>
+        {% if search %}
+            <p>没有找到包含"<strong>{{ search }}</strong>"的帖子</p>
+            <a href="{{ url_for('index') }}" class="btn btn-primary">返回首页</a>
+        {% else %}
+            <p>还没有帖子，快来发布第一条吧！</p>
+            {% if current_user %}
+                <a href="{{ url_for('create_post') }}" class="btn btn-primary">发布新帖</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary">登录后发帖</a>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}

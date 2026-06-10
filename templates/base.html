@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}火影忍者手游论坛{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="{{ url_for('index') }}" class="logo">
+            <span class="logo-icon">🍥</span>
+            <span>火影忍者手游论坛</span>
+        </a>
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}">首页</a>
+            {% if current_user %}
+                <a href="{{ url_for('create_post') }}" class="btn-post">+ 发帖</a>
+                <div class="nav-user">
+                    <span class="username">{{ current_user.username }}</span>
+                    {% if current_user.is_admin %}
+                        <a href="{{ url_for('admin_panel') }}" class="badge-admin">管理</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}">退出</a>
+                </div>
+            {% else %}
+                <a href="{{ url_for('login') }}">登录</a>
+                <a href="{{ url_for('register') }}">注册</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- Flash 消息 -->
+    <div class="flash-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">
+                        <span>{{ message }}</span>
+                        <span class="close" onclick="this.parentElement.remove()">✕</span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- 页面内容 -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

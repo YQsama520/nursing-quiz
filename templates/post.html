@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title }} - 火影忍者手游论坛{% endblock %}
+
+{% block content %}
+<!-- 帖子详情 -->
+<div class="post-detail">
+    <div class="post-header">
+        {% if post.is_pinned %}<span class="pin-badge">📌 置顶</span>{% endif %}
+    </div>
+    <h1>{{ post.title }}</h1>
+    <div class="post-info">
+        <span>👤 {{ post.username }}</span>
+        <span>🕐 {{ post.created_at }}</span>
+        <span>👁️ {{ post.view_count }} 次浏览</span>
+        {% if post.is_elite %}<span>⭐ 精华帖</span>{% endif %}
+    </div>
+    <div class="post-body">{{ post.content }}</div>
+
+    {% if current_user and current_user.is_admin %}
+    <div class="post-actions">
+        <form method="POST" action="{{ url_for('toggle_pin', post_id=post.id) }}" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-outline">
+                {% if post.is_pinned %}📌 取消置顶{% else %}📌 置顶{% endif %}
+            </button>
+        </form>
+        <form method="POST" action="{{ url_for('delete_post', post_id=post.id) }}" style="display:inline"
+              onsubmit="return confirm('确定要删除这个帖子吗？')">
+            <button type="submit" class="btn btn-sm btn-danger">🗑️ 删除帖子</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 回帖区 -->
+<div class="comments-section">
+    <h2>💬 回帖（{{ comments|length }}）</h2>
+
+    {% if current_user %}
+    <form class="comment-form" method="POST">
+        <div class="form-group">
+            <textarea name="content" placeholder="写下你的回复..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm">发表回复</button>
+    </form>
+    {% else %}
+    <div class="empty-state" style="padding:20px">
+        <p><a href="{{ url_for('login') }}" style="color:var(--orange-light)">登录</a>后可以回复</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:20px">
+        {% if comments %}
+            {% for comment in comments %}
+                <div class="comment">
+                    <div class="comment-meta">
+                        <span class="comment-author">{{ comment.username }}</span>
+                        <div>
+                            <span class="comment-time">{{ comment.created_at }}</span>
+                            {% if current_user and current_user.is_admin %}
+                                <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                                      style="display:inline" onsubmit="return confirm('确定要删除这条回复吗？')">
+                                    <button type="submit" class="btn-link">删除</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="comment-body">{{ comment.content }}</div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state" style="padding:30px 0">
+                <p>还没有回复，快来抢沙发！</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
