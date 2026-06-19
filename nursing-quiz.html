@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>护理考试 · 刷题复习</title>
+<script src="questions-data.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;background:#080818;color:#e8e6f0;overflow-x:hidden;line-height:1.7}
+:root{--bg:#080818;--bg2:#0d0d24;--card:#12122e;--card-hover:#1a1a3a;--gold:#d4a853;--gold-dim:#b8923a;--cyan:#00d4ff;--cyan-dim:#009dbb;--green:#4ade80;--red:#ff6b6b;--text:#e8e6f0;--text-dim:#9896b0;--radius:16px;--shadow:0 8px 40px rgba(0,0,0,.5)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--gold-dim);border-radius:2px}
+
+/* ─── Page Layout ─── */
+.app{max-width:900px;margin:0 auto;padding:24px 20px 80px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:32px;flex-wrap:wrap;gap:12px}
+.header .logo{font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px}
+.header .nav-links{display:flex;gap:16px;font-size:13px;flex-wrap:wrap}
+.header .nav-links a{color:var(--text-dim);cursor:pointer;transition:color .2s;padding:4px 0}
+.header .nav-links a:hover{color:var(--gold)}
+.header .nav-links a.active{color:var(--gold);border-bottom:2px solid var(--gold)}
+
+/* ─── Subject Grid ─── */
+.page{display:none}
+.page.active{display:block}
+.subjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:12px}
+.subject-card{background:var(--card);border-radius:var(--radius);padding:28px 24px;border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:all .3s;text-align:center}
+.subject-card:hover{background:var(--card-hover);transform:translateY(-3px);border-color:rgba(212,168,83,.2)}
+.subject-card .icon{font-size:36px;margin-bottom:12px}
+.subject-card h3{font-size:17px;font-weight:700;color:var(--gold);margin-bottom:6px}
+.subject-card .info{font-size:13px;color:var(--text-dim)}
+.subject-card .progress-bar{height:4px;background:rgba(255,255,255,.06);border-radius:2px;margin-top:16px;overflow:hidden}
+.subject-card .progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--cyan));border-radius:2px;transition:width .5s;width:0%}
+.stats-line{display:flex;justify-content:center;gap:24px;font-size:12px;color:var(--text-dim);margin-top:12px;flex-wrap:wrap}
+.stats-line span{color:var(--gold);font-weight:600}
+
+/* ─── Question Page ─── */
+.question-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.question-header .subject-name{font-size:14px;color:var(--text-dim)}
+.question-header .q-progress{font-size:14px;color:var(--text-dim)}
+.question-header .q-progress span{color:var(--gold);font-weight:600}
+.progress-track{height:4px;background:rgba(255,255,255,.06);border-radius:2px;margin-bottom:28px;overflow:hidden}
+.progress-track .fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--cyan));border-radius:2px;transition:width .4s}
+
+.stem{font-size:17px;font-weight:600;line-height:1.8;margin-bottom:24px;padding:20px;background:rgba(255,255,255,.02);border-radius:12px;border-left:3px solid var(--gold)}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.option-btn{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:2px solid rgba(255,255,255,.06);border-radius:12px;cursor:pointer;transition:all .2s;font-size:15px;color:var(--text);text-align:left;font-family:inherit;line-height:1.6}
+.option-btn:hover{border-color:rgba(212,168,83,.3);background:rgba(212,168,83,.04)}
+.option-btn .letter{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;color:var(--text-dim)}
+.option-btn.selected{border-color:var(--gold);background:rgba(212,168,83,.08)}
+.option-btn.selected .letter{background:var(--gold);color:#1a1a2e}
+.option-btn.correct{border-color:var(--green);background:rgba(74,222,128,.08)}
+.option-btn.correct .letter{background:var(--green);color:#1a1a2e}
+.option-btn.wrong{border-color:var(--red);background:rgba(255,107,107,.08)}
+.option-btn.wrong .letter{background:var(--red);color:#fff}
+.option-btn.show-correct{border-color:var(--green);background:rgba(74,222,128,.04)}
+.option-btn.show-correct .letter{background:var(--green);color:#1a1a2e}
+.option-btn:disabled{cursor:default;opacity:.85}
+
+/* ─── Result ─── */
+.result-bar{padding:14px 20px;border-radius:12px;margin-bottom:20px;font-size:15px;font-weight:600;display:none}
+.result-bar.correct{display:block;background:rgba(74,222,128,.1);color:var(--green);border:1px solid rgba(74,222,128,.2)}
+.result-bar.wrong{display:block;background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.2)}
+.result-bar.no-answer{display:block;background:rgba(255,255,255,.04);color:var(--text-dim);border:1px solid rgba(255,255,255,.08)}
+
+/* ─── Controls ─── */
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.controls button{padding:10px 22px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .2s}
+.btn-gold{background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#1a1a2e}
+.btn-gold:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(212,168,83,.3)}
+.btn-cyan{background:linear-gradient(135deg,var(--cyan-dim),var(--cyan));color:#1a1a2e}
+.btn-cyan:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,255,.3)}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,.15)!important;color:var(--text)}
+.btn-outline:hover{background:rgba(255,255,255,.06);border-color:var(--gold)!important}
+.btn-red{background:linear-gradient(135deg,#dc2626,#ff6b6b);color:#fff}
+.btn-red:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,107,107,.3)}
+.controls button:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+/* ─── Stats Page ─── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:var(--card);border-radius:12px;padding:20px;text-align:center;border:1px solid rgba(255,255,255,.04)}
+.stat-card .num{font-size:32px;font-weight:700;background:linear-gradient(135deg,var(--gold),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-card .label{font-size:12px;color:var(--text-dim);margin-top:4px}
+.stat-subject{background:var(--card);border-radius:12px;padding:20px;margin-bottom:12px;border:1px solid rgba(255,255,255,.04)}
+.stat-subject .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px}
+.stat-subject .head h4{font-size:15px;font-weight:700;color:var(--gold)}
+.stat-subject .head span{font-size:12px;color:var(--text-dim)}
+.stat-bar{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
+.stat-bar .fill{height:100%;border-radius:4px;transition:width .5s}
+.stat-bar .fill.good{background:linear-gradient(90deg,var(--gold),var(--green))}
+.stat-bar .fill.ok{background:linear-gradient(90deg,var(--gold),var(--cyan))}
+.stat-bar .fill.low{background:linear-gradient(90deg,var(--gold-dim),var(--red))}
+
+/* ─── Wrong Questions ─── */
+.wrong-list .wrong-item{background:var(--card);border-radius:12px;padding:16px 20px;margin-bottom:10px;border-left:3px solid var(--red);cursor:pointer;transition:all .2s}
+.wrong-list .wrong-item:hover{background:var(--card-hover)}
+.wrong-list .wrong-item .wi-head{display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);margin-bottom:6px}
+.wrong-list .wrong-item .wi-stem{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.6}
+.wrong-list .wrong-item .wi-answer{font-size:12px;color:var(--green)}
+.wrong-list .wrong-item .wi-wrong{font-size:12px;color:var(--red)}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-dim);font-size:15px}
+.empty-state .icon{font-size:48px;margin-bottom:16px;opacity:.5}
+
+/* ─── Bookmark button ─── */
+.bookmark-btn{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:transparent;cursor:pointer;font-size:16px;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.bookmark-btn:hover{border-color:var(--gold);background:rgba(212,168,83,.08)}
+.bookmark-btn.active{background:rgba(212,168,83,.15);border-color:var(--gold)}
+
+/* ─── Random settings ─── */
+.random-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:14px 18px;background:rgba(0,212,255,.04);border-radius:10px;border:1px solid rgba(0,212,255,.1)}
+.random-bar .label{font-size:13px;color:var(--text-dim)}
+.random-bar .count{font-size:22px;font-weight:700;color:var(--cyan)}
+
+/* ─── Modal ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);padding:32px;max-width:520px;width:100%;border:1px solid rgba(255,255,255,.08);max-height:80vh;overflow-y:auto}
+.modal h3{font-size:18px;font-weight:700;color:var(--gold);margin-bottom:16px}
+.modal .opt-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:14px}
+.modal .opt-row:last-child{border:none}
+.modal .opt-row .badge{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.modal .opt-row .badge.done{background:rgba(74,222,128,.15);color:var(--green)}
+.modal .opt-row .badge.pending{background:rgba(255,255,255,.06);color:var(--text-dim)}
+.modal .opt-row .badge.marked{background:rgba(212,168,83,.15);color:var(--gold)}
+
+/* ─── Settings button ─── */
+.settings-btn{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.1);background:transparent;cursor:pointer;font-size:16px;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-dim)}
+.settings-btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(212,168,83,.08)}
+.settings-group{margin-bottom:20px;padding:16px;background:rgba(255,255,255,.02);border-radius:12px}
+.settings-group h4{font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px}
+.settings-group p{font-size:12px;color:var(--text-dim);margin-bottom:8px}
+.settings-group .input-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.settings-group input[type=number]{width:70px;padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.3);color:var(--text);font-size:14px;font-family:inherit;outline:none}
+.settings-group input[type=number]:focus{border-color:var(--gold)}
+.settings-group .badge-count{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(255,107,107,.15);color:var(--red)}
+
+/* ─── Responsive ─── */
+@media(max-width:600px){
+  .app{padding:16px 12px 80px}
+  .subjects{grid-template-columns:1fr 1fr;gap:12px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .stem{font-size:15px;padding:16px}
+  .option-btn{font-size:14px;padding:12px 14px}
+  .controls button{padding:8px 16px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ Header ═══ -->
+  <div class="header">
+    <div class="logo">📚 护理刷题</div>
+    <div class="nav-links">
+      <a class="active" onclick="showPage('home')" id="navHome">科目</a>
+      <a onclick="showPage('stats')" id="navStats">统计</a>
+      <a onclick="showPage('wrong')" id="navWrong">错题本</a>
+      <a onclick="showPage('bookmarks')" id="navBookmarks">标记 ⭐</a>
+    </div>
+  </div>
+
+  <!-- ═══ Page: Home (Subject Selection) ═══ -->
+  <div class="page active" id="pageHome">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">选择科目</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">选择一个科目开始刷题，进度自动保存</p>
+    <div class="subjects" id="subjectGrid"></div>
+  </div>
+
+  <!-- ═══ Page: Quiz ═══ -->
+  <div class="page" id="pageQuiz">
+    <div class="random-bar" id="randomBar" style="display:none">
+      <span class="label">🎲 随机模式</span>
+      <span class="count" id="randomCount">0</span>
+      <span style="font-size:12px;color:var(--text-dim)">题剩余</span>
+      <button class="btn-outline" onclick="exitRandom()" style="padding:4px 12px;font-size:12px">退出</button>
+    </div>
+    <div class="question-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="subject-name" id="qSubject"></div>
+        <button class="settings-btn" onclick="showResetModal()" title="答题设置">⚙️</button>
+      </div>
+      <div class="q-progress"><span id="qNum">0</span>/<span id="qTotal">0</span></div>
+    </div>
+    <div class="progress-track"><div class="fill" id="qProgress" style="width:0%"></div></div>
+    <div style="position:relative">
+      <div class="stem" id="qStem"></div>
+      <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()" title="标记本题">☆</button>
+    </div>
+    <div class="options" id="qOptions"></div>
+    <div class="result-bar" id="resultBar"></div>
+    <div class="controls" id="qControls"></div>
+  </div>
+
+  <!-- ═══ Page: Stats ═══ -->
+  <div class="page" id="pageStats">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:24px">📊 答题统计</h2>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div id="statsSubjects"></div>
+  </div>
+
+  <!-- ═══ Page: Wrong Questions ═══ -->
+  <div class="page" id="pageWrong">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">📕 错题本</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">答错的题都在这里，点击可重新练习</p>
+    <div class="wrong-list" id="wrongList"></div>
+  </div>
+
+  <!-- ═══ Page: Bookmarks ═══ -->
+  <div class="page" id="pageBookmarks">
+    <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">⭐ 标记题目</h2>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">你拿不准标记过的题目</p>
+    <div class="wrong-list" id="bookmarkList"></div>
+  </div>
+
+  <!-- ═══ Reset Settings Modal ═══ -->
+  <div class="modal-overlay" id="resetModal">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin-bottom:0">⚙️ 答题设置</h3>
+        <button onclick="closeResetModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div id="resetModalBody"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// Data & State
+// ═══════════════════════════════════════════════════════════
+const DATA = QUESTION_DATA.subjects;
+const LS_KEY = 'nursing_quiz_progress';
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {} }
+  catch { return {} }
+}
+function saveState(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)) }
+
+let state = loadState();
+let currentSubject = null;
+let currentQuestions = [];
+let currentIndex = 0;
+let isRandom = false;
+let randomPool = [];
+let answered = false;
+
+// ─── Init ───
+function init() {
+  renderSubjects();
+  renderStats();
+  renderWrong();
+  renderBookmarks();
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    const page = document.querySelector('.page.active');
+    if (!page || page.id !== 'pageQuiz') return;
+
+    const key = e.key.toUpperCase();
+    if (['A','B','C','D','E'].includes(key) && !answered) {
+      const btns = document.querySelectorAll('.option-btn');
+      for (const b of btns) {
+        if (b.dataset.letter === key) { b.click(); break }
+      }
+    }
+    if (key === 'ENTER' || key === ' ') {
+      const nextBtn = document.querySelector('#nextBtn');
+      if (nextBtn) nextBtn.click();
+    }
+  });
+}
+
+// ─── Page Navigation ───
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page' + id.charAt(0).toUpperCase() + id.slice(1)).classList.add('active');
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  const navEl = document.getElementById('nav' + id.charAt(0).toUpperCase() + id.slice(1));
+  if (navEl) navEl.classList.add('active');
+
+  if (id === 'stats') renderStats();
+  if (id === 'wrong') renderWrong();
+  if (id === 'bookmarks') renderBookmarks();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Subjects
+// ═══════════════════════════════════════════════════════════
+function renderSubjects() {
+  const grid = document.getElementById('subjectGrid');
+  grid.innerHTML = DATA.map(s => {
+    const p = state[s.id] || { done: 0, correct: 0, wrong: 0, wrongIds: [], choices: {}, results: {} };
+    const total = s.questions.length;
+    const pct = total > 0 ? Math.round(p.done / total * 100) : 0;
+
+    const icons = ['🏥', '🦠', '👶', '🚑'];
+    const idx = DATA.indexOf(s);
+
+    return `<div class="subject-card" onclick="startSubject('${s.id}')">
+      <div class="icon">${icons[idx] || '📚'}</div>
+      <h3>${s.name}</h3>
+      <div class="info">${total} 题</div>
+      <div class="progress-bar"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="stats-line">
+        <span>${p.done}</span> 已做 · 正确率 <span>${p.done > 0 ? Math.round((p.correct || 0) / p.done * 100) : 0}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function startSubject(id, randomMode = false) {
+  const subj = DATA.find(s => s.id === id);
+  if (!subj) return;
+  currentSubject = subj;
+  isRandom = randomMode;
+
+  if (randomMode) {
+    // Create random pool from all questions
+    randomPool = shuffle([...subj.questions.map((q, i) => i)]);
+    currentIndex = 0;
+    currentQuestions = randomPool.map(i => subj.questions[i]);
+  } else {
+    const p = state[id] || { done: 0 };
+    currentIndex = Math.min(p.done || 0, subj.questions.length - 1);
+    currentQuestions = subj.questions;
+  }
+
+  document.getElementById('randomBar').style.display = randomMode ? 'flex' : 'none';
+  if (randomMode) updateRandomCount();
+
+  showPage('quiz');
+  showQuestion();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Quiz
+// ═══════════════════════════════════════════════════════════
+function showQuestion() {
+  if (!currentSubject || currentIndex >= currentQuestions.length) {
+    showQuizEnd();
+    return;
+  }
+
+  const q = currentQuestions[currentIndex];
+  const p = currentSubject ? state[currentSubject.id] : null;
+  const qKey = String(q.id);
+  const savedLetter = p && p.choices ? p.choices[qKey] : null;
+  answered = false;
+
+  document.getElementById('qSubject').textContent = currentSubject.name;
+  document.getElementById('qNum').textContent = currentIndex + 1;
+  document.getElementById('qTotal').textContent = currentQuestions.length;
+  document.getElementById('qProgress').style.width = ((currentIndex) / currentQuestions.length * 100) + '%';
+
+  // Stem
+  document.getElementById('qStem').textContent = q.stem;
+
+  // Options
+  const optsDiv = document.getElementById('qOptions');
+  const letters = ['A','B','C','D','E','F','G'];
+  optsDiv.innerHTML = q.options.map((opt, i) => `
+    <button class="option-btn" data-letter="${letters[i]}" data-index="${i}" onclick="selectOption(this, ${i})" disabled>
+      <span class="letter">${letters[i]}</span>
+      <span>${opt}</span>
+    </button>
+  `).join('');
+
+  // Restore saved answer if exists
+  if (savedLetter && typeof savedLetter === 'string') {
+    answered = true;
+    const correctLetter = q.answer;
+    const correctIdx = correctLetter ? correctLetter.charCodeAt(0) - 65 : -1;
+    const savedIdx = savedLetter.charCodeAt(0) - 65;
+
+    document.querySelectorAll('.option-btn').forEach((b, i) => {
+      b.disabled = true;
+      if (i === correctIdx) b.classList.add('correct');
+      if (b.dataset.letter === savedLetter) {
+        if (savedLetter === correctLetter) {
+          b.classList.add('selected');
+        } else {
+          b.classList.add('wrong');
+        }
+      }
+    });
+
+    // Show result
+    const isCorrect = p.results && p.results[qKey];
+    const bar = document.getElementById('resultBar');
+    if (!q.hasAnswer) {
+      bar.className = 'result-bar no-answer';
+      bar.textContent = '💡 本题无标准答案，请自行判断';
+      bar.style.display = 'block';
+    } else if (isCorrect) {
+      bar.className = 'result-bar correct';
+      bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
+      bar.style.display = 'block';
+    } else {
+      bar.className = 'result-bar wrong';
+      bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
+      bar.style.display = 'block';
+    }
+  } else {
+    // No saved answer — enable buttons after delay
+    setTimeout(() => {
+      document.querySelectorAll('.option-btn').forEach(b => {
+        if (!b.classList.contains('correct') && !b.classList.contains('wrong')) {
+          b.disabled = false;
+        }
+      });
+    }, 50);
+
+    // Result bar
+    document.getElementById('resultBar').className = 'result-bar';
+    document.getElementById('resultBar').style.display = 'none';
+  }
+
+  // Bookmark
+  updateBookmarkBtn();
+
+  // Controls
+  renderControls();
+}
+
+function selectOption(btn, idx) {
+  if (answered) return;
+  answered = true;
+
+  const q = currentQuestions[currentIndex];
+  const userLetter = btn.dataset.letter;
+  const correctLetter = q.answer;
+  const correctIdx = correctLetter ? correctLetter.charCodeAt(0) - 65 : -1;
+
+  // Disable all option buttons
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+  // Mark selected and correct/wrong
+  document.querySelectorAll('.option-btn').forEach((b, i) => {
+    if (i === correctIdx) {
+      b.classList.add('correct');
+    }
+  });
+
+  const isCorrect = userLetter === correctLetter;
+  if (!isCorrect) {
+    btn.classList.add('wrong');
+  } else {
+    btn.classList.add('selected');
+  }
+
+  // Show result
+  const bar = document.getElementById('resultBar');
+  if (!q.hasAnswer) {
+    bar.className = 'result-bar no-answer';
+    bar.textContent = '💡 本题无标准答案，请自行判断';
+    bar.style.display = 'block';
+  } else if (isCorrect) {
+    bar.className = 'result-bar correct';
+    bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
+    bar.style.display = 'block';
+  } else {
+    bar.className = 'result-bar wrong';
+    bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
+    bar.style.display = 'block';
+  }
+
+  // Save progress (pass the letter they chose)
+  saveAnswer(q, isCorrect, userLetter);
+
+  // Update controls (show next/prev)
+  renderControls();
+}
+
+function renderControls() {
+  const div = document.getElementById('qControls');
+  const hasNext = currentIndex < currentQuestions.length - 1;
+  const hasPrev = currentIndex > 0;
+
+  let html = '';
+  if (hasPrev) html += '<button class="btn-outline" onclick="prevQuestion()">◀ 上一题</button>';
+  if (hasNext) html += '<button class="btn-gold" id="nextBtn" onclick="nextQuestion()">下一题 ▶</button>';
+  if (!hasNext) html += '<button class="btn-cyan" onclick="showPage(\'home\')">✅ 完成！返回科目</button>';
+
+  div.innerHTML = html;
+}
+
+function nextQuestion() {
+  if (currentIndex < currentQuestions.length - 1) {
+    currentIndex++;
+    showQuestion();
+  }
+}
+
+function prevQuestion() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    showQuestion();
+  }
+}
+
+function exitRandom() {
+  showPage('home');
+  currentSubject = null;
+}
+
+function updateRandomCount() {
+  document.getElementById('randomCount').textContent = randomPool.length - currentIndex;
+}
+
+function showQuizEnd() {
+  document.getElementById('qStem').textContent = '🎉 全部完成！';
+  document.getElementById('qOptions').innerHTML = '';
+  document.getElementById('resultBar').className = 'result-bar correct';
+  document.getElementById('resultBar').textContent = '太棒了！所有题目都做完了！';
+  document.getElementById('resultBar').style.display = 'block';
+  document.getElementById('qControls').innerHTML = '<button class="btn-gold" onclick="startSubject(currentSubject.id, isRandom)">🔄 再来一轮</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
+  document.getElementById('qProgress').style.width = '100%';
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Progress Saving
+// ═══════════════════════════════════════════════════════════
+function saveAnswer(q, correct, letter) {
+  const id = currentSubject.id;
+  if (!state[id]) {
+    state[id] = { done: 0, correct: 0, wrong: 0, wrongIds: [], choices: {}, results: {} };
+  }
+  const p = state[id];
+
+  const qKey = String(q.id);
+  const prevResult = p.results[qKey]; // true/false/undefined
+
+  // Don't count if already answered correctly
+  if (prevResult !== true) {
+    if (correct) {
+      p.correct++;
+      p.done++;
+    } else {
+      p.wrong++;
+      p.done++;
+    }
+  }
+
+  // Store the letter the user chose (for restoring "上一题")
+  if (letter) p.choices[qKey] = letter;
+  p.results[qKey] = correct;
+
+  // Manage wrong IDs
+  const wrongSet = new Set(p.wrongIds || []);
+  if (correct) {
+    wrongSet.delete(qKey);
+  } else {
+    wrongSet.add(qKey);
+  }
+  p.wrongIds = [...wrongSet];
+
+  // Save sequential progress (only in non-random mode)
+  if (!isRandom) {
+    p.done = Math.max(p.done, currentIndex + 1);
+  }
+
+  saveState(state);
+  renderSubjects();
+  renderStats();
+}
+
+function getSubjectProgress(id) {
+  return state[id] || { done: 0, correct: 0, wrong: 0, wrongIds: [], choices: {}, results: {} };
+}
+
+// ═══════════════════════════════════════════════════════════
+// Bookmark
+// ═══════════════════════════════════════════════════════════
+function toggleBookmark() {
+  if (!currentSubject) return;
+  const id = currentSubject.id;
+  const q = currentQuestions[currentIndex];
+  const key = id + '_' + q.id;
+
+  if (!state.bookmarks) state.bookmarks = {};
+  if (state.bookmarks[key]) {
+    delete state.bookmarks[key];
+  } else {
+    state.bookmarks[key] = true;
+  }
+  saveState(state);
+  updateBookmarkBtn();
+}
+
+function updateBookmarkBtn() {
+  if (!currentSubject || !currentQuestions[currentIndex]) return;
+  const btn = document.getElementById('bookmarkBtn');
+  const key = currentSubject.id + '_' + currentQuestions[currentIndex].id;
+  if (state.bookmarks && state.bookmarks[key]) {
+    btn.textContent = '⭐';
+    btn.classList.add('active');
+  } else {
+    btn.textContent = '☆';
+    btn.classList.remove('active');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Stats
+// ═══════════════════════════════════════════════════════════
+function renderStats() {
+  let totalDone = 0, totalCorrect = 0, totalWrong = 0;
+  DATA.forEach(s => {
+    const p = state[s.id] || {};
+    totalDone += p.done || 0;
+    totalCorrect += p.correct || 0;
+    totalWrong += p.wrong || 0;
+  });
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="num">${totalDone}</div><div class="label">已做题</div></div>
+    <div class="stat-card"><div class="num">${totalDone > 0 ? Math.round(totalCorrect / totalDone * 100) : 0}%</div><div class="label">正确率</div></div>
+    <div class="stat-card"><div class="num">${totalWrong}</div><div class="label">错题数</div></div>
+    <div class="stat-card"><div class="num">${countBookmarks()}</div><div class="label">标记题</div></div>
+  `;
+
+  document.getElementById('statsSubjects').innerHTML = DATA.map(s => {
+    const p = getSubjectProgress(s.id);
+    const total = s.questions.length;
+    const pct = total > 0 ? Math.round((p.done || 0) / total * 100) : 0;
+    const acc = (p.done || 0) > 0 ? Math.round((p.correct || 0) / (p.done || 0) * 100) : 0;
+    const barClass = acc >= 70 ? 'good' : acc >= 40 ? 'ok' : 'low';
+
+    return `<div class="stat-subject">
+      <div class="head">
+        <h4>${s.name}</h4>
+        <span>${p.done || 0}/${total} 题 · 正确率 ${acc}%</span>
+      </div>
+      <div class="stat-bar"><div class="fill ${barClass}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function countBookmarks() {
+  return state.bookmarks ? Object.keys(state.bookmarks).length : 0;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Wrong Questions
+// ═══════════════════════════════════════════════════════════
+function renderWrong() {
+  let items = [];
+  DATA.forEach(s => {
+    const p = state[s.id];
+    if (!p || !p.wrongIds || p.wrongIds.length === 0) return;
+    p.wrongIds.forEach(id => {
+      const q = s.questions.find(x => String(x.id) === id);
+      if (q) items.push({ subject: s, question: q });
+    });
+  });
+
+  const div = document.getElementById('wrongList');
+  if (items.length === 0) {
+    div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>没有错题，继续保持！</p></div>';
+    return;
+  }
+
+  div.innerHTML = items.map(item => `
+    <div class="wrong-item" onclick="startAtQuestion('${item.subject.id}', ${item.question.id})">
+      <div class="wi-head">
+        <span>${item.subject.name}</span>
+        <span>#${item.question.id}</span>
+      </div>
+      <div class="wi-stem">${item.question.stem.slice(0, 80)}${item.question.stem.length > 80 ? '...' : ''}</div>
+      <div>
+        <span class="wi-wrong">你的答案: ✗</span>
+        <span class="wi-answer"> 正确答案: ${item.question.answer}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// Bookmarks
+// ═══════════════════════════════════════════════════════════
+function renderBookmarks() {
+  const items = [];
+  if (state.bookmarks) {
+    Object.keys(state.bookmarks).forEach(key => {
+      const [sid, qid] = key.split('_');
+      const s = DATA.find(x => x.id === sid);
+      if (!s) return;
+      const q = s.questions.find(x => String(x.id) === qid);
+      if (q) items.push({ subject: s, question: q, key });
+    });
+  }
+
+  const div = document.getElementById('bookmarkList');
+  if (items.length === 0) {
+    div.innerHTML = '<div class="empty-state"><div class="icon">⭐</div><p>还没有标记题目，做题时可以标记拿不准的题</p></div>';
+    return;
+  }
+
+  div.innerHTML = items.map(item => `
+    <div class="wrong-item" onclick="startAtQuestion('${item.subject.id}', ${item.question.id})">
+      <div class="wi-head">
+        <span>${item.subject.name}</span>
+        <span>#${item.question.id}</span>
+      </div>
+      <div class="wi-stem">${item.question.stem.slice(0, 80)}${item.question.stem.length > 80 ? '...' : ''}</div>
+      <div style="font-size:11px;color:var(--gold)">⭐ 已标记</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// Jump to specific question
+// ═══════════════════════════════════════════════════════════
+function startAtQuestion(subjectId, questionId) {
+  const subj = DATA.find(s => s.id === subjectId);
+  if (!subj) return;
+  currentSubject = subj;
+  isRandom = false;
+
+  const idx = subj.questions.findIndex(q => q.id === questionId);
+  currentIndex = idx >= 0 ? idx : 0;
+  currentQuestions = subj.questions;
+
+  document.getElementById('randomBar').style.display = 'none';
+  showPage('quiz');
+  showQuestion();
+}
+
+// ═══════════════════════════════════════════════════════════
+// Reset Functions
+// ═══════════════════════════════════════════════════════════
+function showResetModal() {
+  if (!currentSubject) return;
+  const p = state[currentSubject.id] || {};
+  const total = currentSubject.questions.length;
+  const wrongCount = (p.wrongIds || []).length;
+
+  document.getElementById('resetModalBody').innerHTML = `
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px">
+      当前进度：<span style="color:var(--gold);font-weight:600">${p.done || 0}</span>/${total} 题 ·
+      错题：<span style="color:var(--red);font-weight:600">${wrongCount}</span> 题
+    </div>
+
+    <div class="settings-group">
+      <h4>🔄 全部重新答题</h4>
+      <p>清空该科目所有进度，从第 1 题重新开始</p>
+      <button class="btn-red" onclick="resetAll()" style="padding:8px 20px;font-size:13px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit">全部重做</button>
+    </div>
+
+    <div class="settings-group">
+      <h4>🔢 选择题号</h4>
+      <p>从指定题号继续答题</p>
+      <div class="input-row">
+        <span style="font-size:13px;color:var(--text-dim)">从第</span>
+        <input type="number" id="resetFromInput" value="1" min="1" max="${total}">
+        <span style="font-size:13px;color:var(--text-dim)">题开始</span>
+        <button class="btn-outline" onclick="resetFromQuestion()" style="padding:6px 16px;font-size:12px;border-radius:6px">确定</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>🎲 随机抽题</h4>
+      <p>从题库中随机抽取指定数量的题目</p>
+      <div class="input-row">
+        <input type="number" id="resetRandomInput" value="50" min="1" max="${total}">
+        <span style="font-size:13px;color:var(--text-dim)">题</span>
+        <button class="btn-cyan" onclick="resetRandom()" style="padding:6px 16px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-family:inherit">开始</button>
+      </div>
+    </div>
+
+    <div class="settings-group">
+      <h4>❌ 只重做错题</h4>
+      <p>仅重做你答错的题目</p>
+      <button class="btn-gold" onclick="resetWrong()" style="padding:8px 20px;font-size:13px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit"
+        ${wrongCount === 0 ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>
+        重做错题 ${wrongCount > 0 ? `<span class="badge-count">${wrongCount}</span>` : ''}
+      </button>
+      ${wrongCount === 0 ? '<div style="font-size:11px;color:var(--green);margin-top:6px">✅ 暂无错题</div>' : ''}
+    </div>
+  `;
+  document.getElementById('resetModal').classList.add('show');
+}
+
+function closeResetModal() {
+  document.getElementById('resetModal').classList.remove('show');
+}
+
+function resetAll() {
+  if (!currentSubject) return;
+  const id = currentSubject.id;
+  state[id] = { done: 0, correct: 0, wrong: 0, wrongIds: [], choices: {}, results: {} };
+  saveState(state);
+  closeResetModal();
+  currentIndex = 0;
+  currentQuestions = currentSubject.questions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showQuestion();
+  renderSubjects();
+  renderStats();
+  renderWrong();
+}
+
+function resetFromQuestion() {
+  if (!currentSubject) return;
+  const input = document.getElementById('resetFromInput');
+  const num = parseInt(input.value);
+  if (num < 1 || num > currentSubject.questions.length) return;
+  currentIndex = num - 1;
+  currentQuestions = currentSubject.questions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  closeResetModal();
+  showQuestion();
+}
+
+function resetRandom() {
+  if (!currentSubject) return;
+  const input = document.getElementById('resetRandomInput');
+  let count = parseInt(input.value);
+  if (count < 1) count = 1;
+  if (count > currentSubject.questions.length) count = currentSubject.questions.length;
+
+  const indices = [...Array(currentSubject.questions.length).keys()];
+  shuffle(indices);
+  randomPool = indices.slice(0, count);
+  currentIndex = 0;
+  currentQuestions = randomPool.map(i => currentSubject.questions[i]);
+  isRandom = true;
+
+  document.getElementById('randomBar').style.display = 'flex';
+  updateRandomCount();
+  closeResetModal();
+  showQuestion();
+}
+
+function resetWrong() {
+  if (!currentSubject) return;
+  const id = currentSubject.id;
+  const p = state[id];
+  if (!p || !p.wrongIds || p.wrongIds.length === 0) return;
+
+  const wrongQuestions = [];
+  p.wrongIds.forEach(wid => {
+    const q = currentSubject.questions.find(x => String(x.id) === wid);
+    if (q) wrongQuestions.push(q);
+  });
+  if (wrongQuestions.length === 0) return;
+
+  // Reset progress for these questions
+  wrongQuestions.forEach(q => {
+    const qKey = String(q.id);
+    delete p.choices[qKey];
+    delete p.results[qKey];
+  });
+  p.wrongIds = [];
+  p.correct = 0;
+  p.wrong = 0;
+  p.done = 0;
+  Object.keys(p.results || {}).forEach(k => {
+    if (p.results[k]) p.correct++;
+  });
+  p.done = (p.correct || 0) + (p.wrong || 0);
+  saveState(state);
+
+  currentIndex = 0;
+  currentQuestions = wrongQuestions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  closeResetModal();
+  showQuestion();
+  renderSubjects();
+  renderStats();
+  renderWrong();
+}
+
+// ─── Init on load ───
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
