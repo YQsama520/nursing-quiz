@@ -7,7 +7,15 @@
       "Bash(curl -s http://localhost:5000/)",
       "Bash(git init *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Workflow(deep-research)",
+      "WebFetch(domain:browse-export.arxiv.org)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:ar5iv.labs.arxiv.org)",
+      "WebFetch(domain:pattern.swarma.org)",
+      "WebFetch(domain:hub.baai.ac.cn)",
+      "WebFetch(domain:ideas.repec.org)",
+      "Bash(python *)"
     ]
   }
 }
