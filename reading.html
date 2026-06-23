@@ -6,72 +6,72 @@
 <title>Reading · List</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#080818;color:#e8e6f0;min-height:100vh;display:flex;align-items:center;justify-content:center}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh;display:flex;align-items:center;justify-content:center}
 
 /* ─── Lock Screen ─── */
-.lock-screen{position:fixed;inset:0;background:#080818;display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:24px;transition:opacity .4s}
+.lock-screen{position:fixed;inset:0;background:#f5f5f7;display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:24px;transition:opacity .4s}
 .lock-screen.hidden{opacity:0;pointer-events:none}
 .lock-screen .lock-icon{font-size:48px}
-.lock-screen .lock-hint{font-size:14px;color:#9896b0}
+.lock-screen .lock-hint{font-size:14px;color:#86868b}
 .lock-screen .lock-input{display:flex;gap:10px}
-.lock-screen .lock-input input{width:44px;height:52px;text-align:center;font-size:24px;font-weight:600;border:2px solid rgba(255,255,255,.12);border-radius:12px;outline:none;background:rgba(255,255,255,.04);color:#e8e6f0;font-family:inherit;transition:border-color .2s}
-.lock-screen .lock-input input:focus{border-color:#d4a853}
-.lock-screen .lock-input input.filled{border-color:#4ade80}
-.lock-screen .lock-error{font-size:13px;color:#ff6b6b;min-height:20px;opacity:0;transition:opacity .2s}
+.lock-screen .lock-input input{width:44px;height:52px;text-align:center;font-size:24px;font-weight:600;border:2px solid #d2d2d7;border-radius:12px;outline:none;background:#fff;font-family:inherit;transition:border-color .2s}
+.lock-screen .lock-input input:focus{border-color:#007aff}
+.lock-screen .lock-input input.filled{border-color:#34c759}
+.lock-screen .lock-error{font-size:13px;color:#ff3b30;min-height:20px;opacity:0;transition:opacity .2s}
 .lock-screen .lock-error.show{opacity:1}
 
 /* ─── Content ─── */
 .content{display:none}
 .content.show{display:block}
-.hero{padding:60px 20px 40px;text-align:center;border-bottom:1px solid rgba(255,255,255,.04)}
-.hero h1{font-size:36px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,#d4a853,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{color:#9896b0;font-size:16px;margin-top:8px}
-.hero .time{font-size:13px;color:#555;margin-top:6px}
+.hero{background:linear-gradient(135deg,#f5f5f7 0%,#e8e8ed 100%);padding:60px 20px 40px;text-align:center;border-bottom:1px solid rgba(0,0,0,.04)}
+.hero h1{font-size:36px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,#1d1d1f,#515154);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:#86868b;font-size:16px;margin-top:8px}
+.hero .time{font-size:13px;color:#a1a1a6;margin-top:6px}
 
 .container{max-width:880px;margin:0 auto;padding:32px 20px 60px}
 
 /* ─── Section ─── */
 .section{margin-bottom:36px}
-.section-title{font-size:18px;font-weight:600;color:#d4a853;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.section-title .badge{font-size:12px;font-weight:500;background:rgba(255,255,255,.04);color:#9896b0;padding:2px 10px;border-radius:12px;margin-left:4px}
+.section-title{font-size:18px;font-weight:600;color:#1d1d1f;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title .badge{font-size:12px;font-weight:500;background:#e8e8ed;color:#515154;padding:2px 10px;border-radius:12px;margin-left:4px}
 
 /* ─── Cards ─── */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.card{background:rgba(255,255,255,.03);border-radius:16px;padding:24px;border:1px solid rgba(255,255,255,.04);transition:all .25s;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2)}
-.card:hover{transform:translateY(-3px);border-color:rgba(212,168,83,.15);background:rgba(255,255,255,.05);box-shadow:0 12px 32px rgba(0,0,0,.4)}
+.card{background:#fff;border-radius:16px;padding:24px;border:1px solid rgba(0,0,0,.04);transition:all .25s;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.02)}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.08);border-color:rgba(0,0,0,.08)}
 .card .icon{font-size:32px;margin-bottom:10px}
-.card h3{font-size:16px;font-weight:600;margin-bottom:4px;color:#e8e6f0}
-.card p{font-size:13px;color:#808098;line-height:1.5}
-.card .tag{display:inline-block;margin-top:10px;font-size:11px;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.04);color:#808098}
-.card .tag.active{background:rgba(212,168,83,.1);color:#d4a853}
-.card .tag.new{background:rgba(74,222,128,.08);color:#4ade80}
+.card h3{font-size:16px;font-weight:600;margin-bottom:4px;color:#1d1d1f}
+.card p{font-size:13px;color:#86868b;line-height:1.5}
+.card .tag{display:inline-block;margin-top:10px;font-size:11px;padding:3px 10px;border-radius:8px;background:#f0f0f2;color:#86868b}
+.card .tag.active{background:#e3f2fd;color:#1976d2}
+.card .tag.new{background:#e8f5e9;color:#2e7d32}
 
 /* ─── Toolbar ─── */
 .toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:24px}
-.toolbar button{padding:8px 18px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9896b0;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .2s}
-.toolbar button:hover{background:rgba(255,255,255,.04);color:#e8e6f0}
-.toolbar button.primary{background:linear-gradient(135deg,#b8923a,#d4a853);color:#1a1a2e;border:none}
-.toolbar button.primary:hover{box-shadow:0 4px 16px rgba(212,168,83,.3)}
+.toolbar button{padding:8px 18px;border-radius:10px;border:1px solid #d2d2d7;background:#fff;color:#1d1d1f;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .2s}
+.toolbar button:hover{background:#f0f0f2}
+.toolbar button.primary{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+.toolbar button.primary:hover{background:#000}
 
 /* ─── Edit Panel ─── */
-.edit-panel{display:none;background:rgba(255,255,255,.02);border-radius:16px;padding:24px;margin-bottom:28px;border:1px solid rgba(255,255,255,.08)}
+.edit-panel{display:none;background:#fff;border-radius:16px;padding:24px;margin-bottom:28px;border:1px solid #d2d2d7;box-shadow:0 4px 16px rgba(0,0,0,.06)}
 .edit-panel.open{display:block}
-.edit-panel h3{font-size:15px;font-weight:600;margin-bottom:12px;color:#d4a853}
+.edit-panel h3{font-size:15px;font-weight:600;margin-bottom:12px;color:#1d1d1f}
 .edit-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;transition:background .15s}
-.edit-item:hover{background:rgba(255,255,255,.02)}
-.edit-item .handle{cursor:pointer;color:#555;font-size:13px;padding:2px 6px;border-radius:4px;user-select:none}
+.edit-item:hover{background:#f5f5f7}
+.edit-item .handle{cursor:pointer;color:#c7c7cc;font-size:13px;padding:2px 6px;border-radius:4px;user-select:none}
 .edit-item .ei-name{flex:1;font-size:14px}
-.edit-item .ei-name input{width:100%;border:none;background:transparent;font-size:14px;font-family:inherit;padding:4px 0;border-bottom:1px dashed rgba(255,255,255,.1);outline:none;color:#e8e6f0}
-.edit-item .ei-name input:focus{border-bottom-color:#d4a853}
-.edit-item .ei-hide{font-size:12px;color:#ff6b6b;cursor:pointer;opacity:.6;transition:opacity .2s}
+.edit-item .ei-name input{width:100%;border:none;background:transparent;font-size:14px;font-family:inherit;padding:4px 0;border-bottom:1px dashed #d2d2d7;outline:none;color:#1d1d1f}
+.edit-item .ei-name input:focus{border-bottom-color:#007aff}
+.edit-item .ei-hide{font-size:12px;color:#ff3b30;cursor:pointer;opacity:.6;transition:opacity .2s}
 .edit-item .ei-hide:hover{opacity:1}
 .edit-item.hidden .ei-name{opacity:.4}
 
 /* ─── Footer ─── */
-.footer{text-align:center;padding:20px;color:#555;font-size:13px;border-top:1px solid rgba(255,255,255,.03);margin-top:20px}
+.footer{text-align:center;padding:20px;color:#a1a1a6;font-size:13px;border-top:1px solid rgba(0,0,0,.04);margin-top:20px}
 
 /* ─── Toast ─── */
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d2e;color:#e8e6f0;padding:12px 24px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100;border:1px solid rgba(255,255,255,.06)}
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
 .toast.show{opacity:1}
 
 @media(max-width:600px){
@@ -87,7 +87,7 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;backgr
 
 <!-- ═══ Lock Screen ═══ -->
 <div class="lock-screen" id="lockScreen">
-  <div class="lock-icon" style="filter:drop-shadow(0 0 20px rgba(212,168,83,.3))">🔐</div>
+  <div class="lock-icon">🔐</div>
   <div class="lock-hint">输入密码查看</div>
   <div class="lock-input" id="lockInput">
     <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autofocus>
@@ -116,16 +116,16 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;backgr
 
   <div class="edit-panel" id="editPanel">
     <h3>管理站点</h3>
-    <p style="font-size:13px;color:#808098;margin-bottom:14px">▲▼ 排序 · 点击名称重命名 · 👁 隐藏</p>
+    <p style="font-size:13px;color:#86868b;margin-bottom:14px">▲▼ 排序 · 点击名称重命名 · 👁 隐藏</p>
     <div id="editList"></div>
     <div style="margin-top:14px;display:flex;gap:10px">
-      <input id="newSiteName" placeholder="站点名称" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02);color:#e8e6f0;font-size:14px;font-family:inherit;outline:none">
-      <input id="newSiteUrl" placeholder="链接地址" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.02);color:#e8e6f0;font-size:14px;font-family:inherit;outline:none">
-      <button onclick="addSite()" style="padding:10px 18px;border-radius:10px;border:none;background:#d4a853;color:#1a1a2e;font-size:14px;cursor:pointer;font-family:inherit;font-weight:500">添加</button>
+      <input id="newSiteName" placeholder="站点名称" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #d2d2d7;font-size:14px;font-family:inherit;outline:none">
+      <input id="newSiteUrl" placeholder="链接地址" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #d2d2d7;font-size:14px;font-family:inherit;outline:none">
+      <button onclick="addSite()" style="padding:10px 18px;border-radius:10px;border:none;background:#007aff;color:#fff;font-size:14px;cursor:pointer;font-family:inherit;font-weight:500">添加</button>
     </div>
     <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end">
-      <button onclick="resetDefaults()" style="padding:8px 16px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#ff6b6b;font-size:13px;cursor:pointer;font-family:inherit">恢复默认</button>
-      <button onclick="saveEdit();toggleEdit()" style="padding:8px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#b8923a,#d4a853);color:#1a1a2e;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500">保存</button>
+      <button onclick="resetDefaults()" style="padding:8px 16px;border-radius:10px;border:1px solid #d2d2d7;background:#fff;color:#ff3b30;font-size:13px;cursor:pointer;font-family:inherit">恢复默认</button>
+      <button onclick="saveEdit();toggleEdit()" style="padding:8px 20px;border-radius:10px;border:none;background:#1d1d1f;color:#fff;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500">保存</button>
     </div>
   </div>
 
@@ -246,12 +246,12 @@ function toggleEdit() {
 function renderEditList() {
   document.getElementById('editList').innerHTML = sites.map((s, i) =>
     `<div class="edit-item ${s.hidden ? 'hidden' : ''}">
-      <span class="handle" onclick="moveSite(${i},-1)" style="cursor:pointer">▲</span>
-      <span class="handle" onclick="moveSite(${i},1)" style="cursor:pointer">▼</span>
+      <span class="handle" onclick="moveSite(${i},-1)">▲</span>
+      <span class="handle" onclick="moveSite(${i},1)">▼</span>
       <div class="ei-name"><input type="text" value="${s.name}" onchange="updateSite(${i},'name',this.value)"></div>
-      <span style="font-size:12px;color:#808098;cursor:pointer" onclick="openSite('${s.id}')">🔗</span>
+      <span style="font-size:12px;color:#86868b;cursor:pointer" onclick="openSite('${s.id}')">🔗</span>
       <span class="ei-hide" onclick="toggleHide(${i})">${s.hidden ? '👁‍🗨' : '👁'}</span>
-      <span class="ei-hide" onclick="deleteSite(${i})" style="color:#ff6b6b">✕</span>
+      <span class="ei-hide" onclick="deleteSite(${i})" style="color:#ff3b30">✕</span>
     </div>`
   ).join('');
 }
@@ -262,7 +262,6 @@ function moveSite(idx, dir) {
   [sites[idx], sites[to]] = [sites[to], sites[idx]];
   saveSites(); renderEditList(); renderSections();
 }
-
 function updateSite(idx, field, val) { sites[idx][field] = val; saveSites(); if (!editMode) renderSections(); }
 function toggleHide(idx) { sites[idx].hidden = !sites[idx].hidden; saveSites(); renderEditList(); renderSections(); }
 function deleteSite(idx) {
