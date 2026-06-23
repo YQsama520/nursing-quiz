@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading · List</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh;display:flex;align-items:center;justify-content:center}
+
+/* ─── Lock Screen ─── */
+.lock-screen{position:fixed;inset:0;background:#f5f5f7;display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:24px;transition:opacity .4s}
+.lock-screen.hidden{opacity:0;pointer-events:none}
+.lock-screen .lock-icon{font-size:48px}
+.lock-screen .lock-hint{font-size:14px;color:#86868b}
+.lock-screen .lock-input{display:flex;gap:10px}
+.lock-screen .lock-input input{width:44px;height:52px;text-align:center;font-size:24px;font-weight:600;border:2px solid #d2d2d7;border-radius:12px;outline:none;background:#fff;font-family:inherit;transition:border-color .2s}
+.lock-screen .lock-input input:focus{border-color:#007aff}
+.lock-screen .lock-input input.filled{border-color:#34c759}
+.lock-screen .lock-error{font-size:13px;color:#ff3b30;min-height:20px;opacity:0;transition:opacity .2s}
+.lock-screen .lock-error.show{opacity:1}
+
+/* ─── Hero ─── */
+.content{display:none}
+.content.show{display:block}
+.hero{background:linear-gradient(135deg,#f5f5f7 0%,#e8e8ed 100%);padding:60px 20px 40px;text-align:center;border-bottom:1px solid rgba(0,0,0,.04)}
+.hero h1{font-size:36px;font-weight:700;letter-spacing:-0.5px;background:linear-gradient(135deg,#1d1d1f,#515154);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:#86868b;font-size:16px;margin-top:8px}
+.hero .time{font-size:13px;color:#a1a1a6;margin-top:6px}
+
+/* ─── Container ─── */
+.container{max-width:880px;margin:0 auto;padding:32px 20px 60px}
+
+/* ─── Section ─── */
+.section{margin-bottom:36px}
+.section-title{font-size:18px;font-weight:600;color:#1d1d1f;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title .badge{font-size:12px;font-weight:500;background:#e8e8ed;color:#515154;padding:2px 10px;border-radius:12px;margin-left:4px}
+
+/* ─── Card Grid ─── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.card{background:#fff;border-radius:16px;padding:24px;border:1px solid rgba(0,0,0,.04);transition:all .25s;cursor:pointer;position:relative;box-shadow:0 1px 3px rgba(0,0,0,.02)}
+.card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.08);border-color:rgba(0,0,0,.08)}
+.card .icon{font-size:32px;margin-bottom:10px}
+.card h3{font-size:16px;font-weight:600;margin-bottom:4px}
+.card p{font-size:13px;color:#86868b;line-height:1.5}
+.card .tag{display:inline-block;margin-top:10px;font-size:11px;padding:3px 10px;border-radius:8px;background:#f0f0f2;color:#86868b}
+.card .tag.active{background:#e3f2fd;color:#1976d2}
+.card .tag.new{background:#e8f5e9;color:#2e7d32}
+
+/* ─── Edit Mode ─── */
+.toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:24px}
+.toolbar button{padding:8px 18px;border-radius:10px;border:1px solid #d2d2d7;background:#fff;color:#1d1d1f;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500;transition:all .2s}
+.toolbar button:hover{background:#f0f0f2}
+.toolbar button.primary{background:#1d1d1f;color:#fff;border-color:#1d1d1f}
+.toolbar button.primary:hover{background:#000}
+
+/* ─── Edit Panel ─── */
+.edit-panel{display:none;background:#fff;border-radius:16px;padding:24px;margin-bottom:28px;border:1px solid #d2d2d7;box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.edit-panel.open{display:block}
+.edit-panel h3{font-size:15px;font-weight:600;margin-bottom:12px}
+.edit-item{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;transition:background .15s}
+.edit-item:hover{background:#f5f5f7}
+.edit-item .handle{cursor:pointer;color:#c7c7cc;font-size:13px;padding:2px 6px;border-radius:4px;user-select:none}
+.edit-item .ei-name{flex:1;font-size:14px}
+.edit-item .ei-name input{width:100%;border:none;background:transparent;font-size:14px;font-family:inherit;padding:4px 0;border-bottom:1px dashed #d2d2d7;outline:none}
+.edit-item .ei-name input:focus{border-bottom-color:#007aff}
+.edit-item .ei-hide{font-size:12px;color:#ff3b30;cursor:pointer;opacity:.6;transition:opacity .2s}
+.edit-item .ei-hide:hover{opacity:1}
+.edit-item.hidden .ei-name{opacity:.4}
+
+/* ─── Footer ─── */
+.footer{text-align:center;padding:20px;color:#a1a1a6;font-size:13px;border-top:1px solid rgba(0,0,0,.04);margin-top:20px}
+
+/* ─── Toast ─── */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1d1d1f;color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
+.toast.show{opacity:1}
+
+@media(max-width:600px){
+  .hero{padding:40px 20px 30px}
+  .hero h1{font-size:28px}
+  .grid{grid-template-columns:1fr 1fr;gap:10px}
+  .card{padding:18px}
+  .card .icon{font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Lock Screen ═══ -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-icon">🔐</div>
+  <div class="lock-hint">输入密码查看</div>
+  <div class="lock-input" id="lockInput">
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autofocus>
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]">
+  </div>
+  <div class="lock-error" id="lockError">密码错误</div>
+</div>
+
+<!-- ═══ Content ═══ -->
+<div class="content" id="content">
+<div class="hero">
+  <h1>🪐 YQ · 作品集</h1>
+  <p>一点一滴，都是成长</p>
+  <div class="time" id="timeDisplay"></div>
+</div>
+
+<div class="container">
+  <div class="toolbar">
+    <button onclick="toggleEdit()" id="editBtn">✏️ 管理</button>
+    <button class="primary" onclick="showPage('home')">🏠 首页</button>
+  </div>
+
+  <div class="edit-panel" id="editPanel">
+    <h3>管理站点</h3>
+    <p style="font-size:13px;color:#86868b;margin-bottom:14px">▲▼ 排序 · 点击名称重命名 · 👁 隐藏</p>
+    <div id="editList"></div>
+    <div style="margin-top:14px;display:flex;gap:10px">
+      <input id="newSiteName" placeholder="站点名称" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #d2d2d7;font-size:14px;font-family:inherit;outline:none">
+      <input id="newSiteUrl" placeholder="链接地址" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #d2d2d7;font-size:14px;font-family:inherit;outline:none">
+      <button onclick="addSite()" style="padding:10px 18px;border-radius:10px;border:none;background:#007aff;color:#fff;font-size:14px;cursor:pointer;font-family:inherit;font-weight:500">添加</button>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="resetDefaults()" style="padding:8px 16px;border-radius:10px;border:1px solid #d2d2d7;background:#fff;color:#ff3b30;font-size:13px;cursor:pointer;font-family:inherit">恢复默认</button>
+      <button onclick="saveEdit();toggleEdit()" class="primary" style="padding:8px 20px;border-radius:10px;border:none;background:#1d1d1f;color:#fff;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500">保存</button>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+</div>
+<div class="footer">© YQ · 用 ❤️ 做的</div>
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// Pin Lock
+// ══════════════════════════════════════════════
+const PIN = '050108';
+const inputs = document.querySelectorAll('#lockInput input');
+let pinIdx = 0;
+
+inputs.forEach((inp, i) => {
+  inp.addEventListener('input', () => {
+    if (inp.value && i < inputs.length - 1) inputs[i + 1].focus();
+    inp.classList.toggle('filled', !!inp.value);
+    checkPin();
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i - 1].focus();
+    if (e.key === 'Enter') checkPin();
+  });
+});
+
+function checkPin() {
+  const val = Array.from(inputs).map(i => i.value).join('');
+  if (val.length !== PIN.length) return;
+  if (val === PIN) {
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('content').classList.add('show');
+  } else {
+    const err = document.getElementById('lockError');
+    err.classList.add('show');
+    setTimeout(() => err.classList.remove('show'), 1200);
+    inputs.forEach(i => { i.value = ''; i.classList.remove('filled'); });
+    inputs[0].focus();
+  }
+}
+
+// ══════════════════════════════════════════════
+// Data
+// ══════════════════════════════════════════════
+const DEFAULT_SITES = [
+  { id: 'nursing', name: '护理刷题', url: 'nursing-quiz.html', icon: '🏥', desc: '外科·传染病·儿科·急危重症，1603题刷题复习', tag: '主站', tagColor: 'active' },
+  { id: 'mindmap', name: '护理思维导图', url: 'surgical-mindmap.html', icon: '🧠', desc: '按知识点分类，高频考点一目了然', tag: '主站', tagColor: 'active' },
+  { id: 'yaolixue', name: '药理学刷题', url: '给宝宝做一个药理学复习网站/yaolixue-quiz.html', icon: '💊', desc: '574题药理学复习，有可爱模式彩蛋🎀', tag: '主站', tagColor: 'active' },
+  { id: 'gametheory', name: '博弈论', url: 'game-theory.html', icon: '🎮', desc: '博弈论基础概念与案例讲解', tag: '其他', tagColor: '' },
+  { id: 'naruto', name: '火影论坛', url: '火影论坛/index.html', icon: '🍥', desc: '火影忍者手游玩家社区', tag: '论坛', tagColor: '' },
+];
+
+const LS_KEY = 'yq_portal_sites';
+let sites = loadSites();
+let editMode = false;
+
+function loadSites() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_KEY));
+    if (saved && Array.isArray(saved) && saved.length > 0) return saved;
+  } catch {}
+  return JSON.parse(JSON.stringify(DEFAULT_SITES));
+}
+
+function saveSites() { localStorage.setItem(LS_KEY, JSON.stringify(sites)); }
+
+function resetDefaults() {
+  if (!confirm('恢复默认会丢失所有自定义修改，确定吗？')) return;
+  sites = JSON.parse(JSON.stringify(DEFAULT_SITES));
+  saveSites(); renderAll(); toast('已恢复默认');
+}
+
+// ══════════════════════════════════════════════
+// Render
+// ══════════════════════════════════════════════
+function renderAll() { renderSections(); if (editMode) renderEditList(); }
+
+function renderSections() {
+  const container = document.getElementById('sections');
+  const visible = sites.filter(s => s.hidden !== true);
+  const groups = {};
+  visible.forEach(s => {
+    const tag = s.tag || '其他';
+    if (!groups[tag]) groups[tag] = [];
+    groups[tag].push(s);
+  });
+  const tagOrder = ['主站', '论坛', '其他'];
+  let html = '';
+  tagOrder.forEach(tag => {
+    if (!groups[tag]) return;
+    html += `<div class="section"><div class="section-title">${tag === '主站' ? '📌' : tag === '论坛' ? '💬' : '📦'} ${tag} <span class="badge">${groups[tag].length}</span></div><div class="grid">`;
+    groups[tag].forEach(s => {
+      html += `<div class="card" onclick="openSite('${s.id}')"><div class="icon">${s.icon || '🌐'}</div><h3>${s.name}</h3><p>${s.desc || ''}</p><span class="tag ${s.tagColor || ''}">${s.tag || '站点'}</span></div>`;
+    });
+    html += `</div></div>`;
+  });
+  tagOrder.forEach(t => delete groups[t]);
+  Object.keys(groups).forEach(tag => {
+    html += `<div class="section"><div class="section-title">📂 ${tag} <span class="badge">${groups[tag].length}</span></div><div class="grid">`;
+    groups[tag].forEach(s => {
+      html += `<div class="card" onclick="openSite('${s.id}')"><div class="icon">${s.icon || '🌐'}</div><h3>${s.name}</h3><p>${s.desc || ''}</p><span class="tag">${s.tag || '站点'}</span></div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+function openSite(id) {
+  const s = sites.find(x => x.id === id);
+  if (s) window.open(s.url, '_blank');
+}
+
+// ══════════════════════════════════════════════
+// Edit
+// ══════════════════════════════════════════════
+function toggleEdit() {
+  editMode = !editMode;
+  document.getElementById('editPanel').classList.toggle('open', editMode);
+  document.getElementById('editBtn').textContent = editMode ? '✕ 关闭' : '✏️ 管理';
+  if (editMode) renderEditList();
+}
+
+function renderEditList() {
+  document.getElementById('editList').innerHTML = sites.map((s, i) =>
+    `<div class="edit-item ${s.hidden ? 'hidden' : ''}" data-index="${i}">
+      <span class="handle" onclick="moveSite(${i},-1)" style="cursor:pointer">▲</span>
+      <span class="handle" onclick="moveSite(${i},1)" style="cursor:pointer">▼</span>
+      <div class="ei-name"><input type="text" value="${s.name}" onchange="updateSite(${i},'name',this.value)"></div>
+      <span style="font-size:12px;color:#86868b;cursor:pointer" onclick="openSite('${s.id}')">🔗</span>
+      <span class="ei-hide" onclick="toggleHide(${i})">${s.hidden ? '👁‍🗨' : '👁'}</span>
+      <span class="ei-hide" onclick="deleteSite(${i})" style="color:#ff3b30">✕</span>
+    </div>`
+  ).join('');
+}
+
+function moveSite(idx, dir) {
+  const to = idx + dir;
+  if (to < 0 || to >= sites.length) return;
+  [sites[idx], sites[to]] = [sites[to], sites[idx]];
+  saveSites(); renderEditList(); renderSections();
+}
+
+function updateSite(idx, field, val) { sites[idx][field] = val; saveSites(); if (!editMode) renderSections(); }
+function toggleHide(idx) { sites[idx].hidden = !sites[idx].hidden; saveSites(); renderEditList(); renderSections(); }
+
+function deleteSite(idx) {
+  if (!confirm(`删除「${sites[idx].name}」？`)) return;
+  sites.splice(idx, 1); saveSites(); renderEditList(); renderSections(); toast('已删除');
+}
+
+function addSite() {
+  const name = document.getElementById('newSiteName').value.trim();
+  const url = document.getElementById('newSiteUrl').value.trim();
+  if (!name || !url) { toast('请填写名称和链接'); return; }
+  sites.push({ id: 'custom_' + Date.now(), name, url, icon: '🌐', desc: '', tag: '自定义' });
+  saveSites();
+  document.getElementById('newSiteName').value = '';
+  document.getElementById('newSiteUrl').value = '';
+  renderEditList(); renderSections(); toast('已添加');
+}
+
+function saveEdit() { saveSites(); renderSections(); toast('已保存'); }
+
+// ══════════════════════════════════════════════
+// Toast / Time
+// ══════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2000);
+}
+function updateTime() {
+  document.getElementById('timeDisplay').textContent = new Date().toLocaleString('zh-CN', { year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit' });
+}
+updateTime();
+renderAll();
+</script>
+</body>
+</html>

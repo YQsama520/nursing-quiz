@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>护理学 · 思维导图</title>
+<script src="questions-data.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:#080818;color:#e8e6f0;overflow:hidden;display:flex;flex-direction:column}
+#tabs{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;padding:0 16px;background:rgba(8,8,24,.8)}
+.tab{padding:14px 24px;cursor:pointer;font-size:14px;font-weight:600;color:#666;transition:all .2s;border-bottom:2px solid transparent}
+.tab:hover{color:#9896b0}
+.tab.active{color:#d4a853;border-bottom-color:#d4a853}
+#bodywrap{display:flex;flex:1;height:0}
+#sidebar{width:240px;overflow-y:auto;border-right:1px solid rgba(255,255,255,.06);padding:12px 0;flex-shrink:0;transition:margin-left .3s}
+#sidebar.clps{margin-left:-240px}
+#tb{position:fixed;left:240px;top:60px;z-index:10;width:26px;height:26px;border-radius:6px;background:rgba(8,8,24,.8);border:1px solid rgba(255,255,255,.1);color:#808098;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:left .3s;font-family:inherit}
+#tb:hover{color:#d4a853;border-color:#d4a853}
+#tb.shift{left:8px}
+#sidebar::-webkit-scrollbar{width:3px}#sidebar::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.si{display:flex;align-items:center;gap:8px;padding:10px 18px;cursor:pointer;transition:all .12s;font-size:13px;color:#808098;border-left:3px solid transparent}
+.si:hover{background:rgba(255,255,255,.02);color:#b0b0c8}
+.si.active{background:rgba(212,168,83,.05);color:#f0d080;border-left-color:#d4a853}
+.si .num{font-size:11px;background:rgba(255,255,255,.04);border-radius:8px;padding:0 7px;color:#555;margin-left:auto}
+#main{flex:1;overflow-y:auto;padding:20px 24px 40px}
+#main::-webkit-scrollbar{width:4px}#main::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+.main-title{font-size:20px;font-weight:700;margin-bottom:20px;color:#f0d080}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px}
+.card{background:rgba(18,18,46,.8);border-radius:12px;padding:16px 18px;border:1px solid rgba(255,255,255,.04);transition:all .15s}
+.card:hover{border-color:rgba(212,168,83,.12)}
+.card .q{font-size:14px;font-weight:600;line-height:1.8;margin-bottom:10px;color:#e0d8f0}
+.card .q .h-freq{color:#ff6b6b;font-weight:700;background:rgba(255,107,107,.12);padding:0 3px;border-radius:3px}
+.card .q .h-key{color:#d4a853;font-weight:700;background:rgba(212,168,83,.1);padding:0 3px;border-radius:3px}
+.card .q .h-num{color:#4ade80;font-weight:700;background:rgba(74,222,128,.08);padding:0 3px;border-radius:3px}
+.card .q .h-neg{color:#60a5fa;font-weight:700;background:rgba(96,165,250,.08);padding:0 3px;border-radius:3px}
+.card .q .h-comp{color:#c4a0f8;font-weight:700;background:rgba(196,160,248,.08);padding:0 3px;border-radius:3px}
+.card .opts div .h-freq,.card .opts div .h-key,.card .opts div .h-num,.card .opts div .h-neg,.card .opts div .h-comp{font-weight:600}
+.card .opts{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.card .opts div{font-size:13px;color:#9090aa;line-height:1.6;padding:4px 8px;border-radius:5px}
+.card .opts div.cr{color:#4ade80;background:rgba(74,222,128,.06);border-left:3px solid #4ade80}
+.card .ans{font-size:12px;color:#4ade80;font-weight:700;padding-top:6px;border-top:1px solid rgba(255,255,255,.03)}
+.empty{padding:60px 0;text-align:center;color:#555;font-size:14px;grid-column:1/-1}
+</style>
+</head>
+<body>
+<div id="tabs"><div class="tab active" data-subject="waike" onclick="switchSub('waike')">🏥 外科</div><div class="tab" data-subject="infect" onclick="switchSub('infect')">🦠 传染病</div><div class="tab" data-subject="ped" onclick="switchSub('ped')">👶 儿科</div></div>
+<div id="bodywrap">
+<div id="sidebar"></div><button id="tb" onclick="toggleSidebar()">◀</button>
+<div id="main"><div class="main-title">选择一个分类查看题目</div><div class="card-grid" id="grid"></div></div>
+</div>
+<script>
+const DATA = QUESTION_DATA.subjects;
+
+// ─── 分类定义 ───
+const CATS = {
+  waike: {
+    '腹膜炎':['腹膜炎','腹腔脓肿','盆腔脓肿'],
+    '腹外疝':['疝','腹股沟','嵌顿','绞窄'],
+    '胃十二指肠':['胃溃疡','十二指肠','胃大部','毕I','毕II','胃穿孔','幽门','胃切除'],
+    '阑尾炎':['阑尾'],
+    '肠梗阻':['肠梗阻','肠套叠','肠扭转'],
+    '结直肠肛管':['结肠','直肠','肛管','肛瘘','痔','肛裂'],
+    '胆道':['胆囊','胆管','胆石','胆道','胆总管','胆囊炎','胆管炎'],
+    '胰腺':['胰腺'],
+    '肝脏':['肝脓','肝癌','肝硬','门静脉'],
+    '骨折与脱位':['骨折','脱位','牵引','石膏','固定','Colles','肱骨','股骨'],
+    '骨肿瘤':['骨肉瘤','骨软骨','骨巨细','Codman'],
+    '泌尿前列腺':['肾','膀胱','尿道','前列腺'],
+    '血管':['静脉曲张','静脉血栓'],
+  },
+  infect: {
+    '传染病概述':['传染过程','潜伏期','传染源','传播途径','易感人群','隔离','消毒','传染病流行病学'],
+    '麻疹':['麻疹'],
+    '水痘':['水痘'],
+    '猩红热':['猩红热'],
+    '流行性腮腺炎':['腮腺炎'],
+    '流行性脑脊髓膜炎':['流脑','流行性脑脊髓膜炎'],
+    '乙型脑炎':['乙脑','流行性乙型'],
+    '细菌性痢疾':['痢疾'],
+    '伤寒':['伤寒'],
+    '霍乱':['霍乱'],
+    '肺结核':['结核','肺结核'],
+    '艾滋病':['艾滋'],
+    '乙型肝炎':['乙肝','肝炎'],
+    '狂犬病':['狂犬'],
+    '破伤风':['破伤风'],
+    '新冠肺炎':['新冠','冠状病毒'],
+    '消毒与隔离':['消毒','隔离','防护'],
+  },
+  ped: {
+    '生长发育':['生长发育','体重','身高','头围','囟门','运动发育','语言发育','Apgar'],
+    '小儿营养与喂养':['母乳','配方奶','辅食','喂养','营养'],
+    '计划免疫':['计划免疫','预防接种','疫苗','接种'],
+    '新生儿与新生儿疾病':['新生儿','早产儿','黄疸','窒息','缺氧','颅内出血'],
+    '消化系统':['腹泻','脱水','体液','补液','呕吐','肠套叠'],
+    '呼吸系统':['肺炎','上感','哮喘','咳嗽'],
+    '循环系统':['先心','室缺','房缺','法洛','动脉导管','心脏'],
+    '泌尿系统':['肾病','肾炎','泌尿道'],
+    '血液系统':['贫血','缺铁','白血病','紫癜','营养性'],
+    '神经系统':['惊厥','脑膜炎','化脓性脑膜炎','病毒性脑炎'],
+    '营养性疾病':['佝偻','维生素D','营养不良','肥胖'],
+  }
+};
+
+// ─── 分类题目 ───
+function classify(subId){
+  const sub=DATA.find(s=>s.id===subId);
+  if(!sub) return;
+  const cats=CATS[subId];
+  const result={};
+  Object.keys(cats).forEach(k=>result[k]=[]);
+  sub.questions.forEach(q=>{
+    for(const [name,kws] of Object.entries(cats)){
+      if(kws.some(k=>q.stem.includes(k))){
+        result[name].push(q);break;
+      }
+    }
+  });
+  // 高频考点："最"字类+标志性+首选+金标准
+  const HF = ['最常见','最主要','最重要','最典型','最危险','最严重','最有效','最可靠','标志性','首选','金标准'];
+  Object.keys(result).forEach(name=>{
+    const h = result[name].filter(q=>HF.some(k=>q.stem.includes(k)));
+    if(h.length>0) result[name+'_hf']=h;
+  });
+  return result;
+}
+
+// ─── 渲染 ───
+function switchSub(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.subject===id));
+
+  const cats=classify(id);
+  const sidebar=document.getElementById('sidebar');
+  sidebar.innerHTML='';
+  const names=Object.keys(CATS[id]);
+  names.forEach(name=>{
+    const qs=cats[name]||[];
+    const hf=cats[name+'_hf'];
+    const el=document.createElement('div');
+    el.className='si';el.dataset.name=name;
+    el.innerHTML=`${name} <span class="num">${qs.length}题</span>`;
+    el.onclick=()=>showCat(name,qs,false);
+    sidebar.appendChild(el);
+    if(hf){
+      const el2=document.createElement('div');
+      el2.className='si';el2.dataset.name=name+'_hf';
+      el2.style.paddingLeft='34px';el2.style.fontSize='12px';el2.style.color='#ff6b6b';
+      el2.innerHTML=`🏆 高频考点 <span class="num">${hf.length}题</span>`;
+      el2.onclick=()=>showCat(name+' 高频考点',hf,true);
+      sidebar.appendChild(el2);
+    }
+  });
+
+  // 默认选第一个
+  if(names.length>0) showCat(names[0],cats[names[0]]);
+}
+
+// ─── 考点高亮 ───
+const HL = [
+  [/(最常见|最主要|最重要|最典型|最危险|最严重|最有效|最可靠|最常用|最佳|最主要的|最常见的|最重要的|最危险的|最典型的|最严重的)/g,'h-freq'],
+  [/(首选|金标准|标志性|最有意义|最有价值|最关键)/g,'h-key'],
+  [/(不包括|错误的是|不正确的是|除哪项外|除外|不应该|不宜|忌用|禁用|错误的一项是|哪项不正确|哪项错误)/g,'h-neg'],
+  [/(并发症|合并症|继发|致死|死亡|致命|最危险|最严重)/g,'h-comp'],
+];
+const HL_NUM = /(\d+\s*(?:天|小时|周|月|年|岁|ml|L|cm|mm|kg|g|℃))/g;
+
+function highlight(t){
+  HL.forEach(([re,cls])=>{t=t.replace(re,s=>`<span class="${cls}">${s}</span>`);});
+  t=t.replace(HL_NUM,m=>`<span class="h-num">${m}</span>`);
+  return t;
+}
+
+function showCat(name,qs,isHf){
+  document.querySelectorAll('.si').forEach(e=>e.classList.toggle('active',e.dataset.name===(isHf?name+'_hf':name)));
+  document.getElementById('main').querySelector('.main-title').textContent='📋 '+name;
+  const grid=document.getElementById('grid');
+  if(!qs||qs.length===0){
+    grid.innerHTML='<div class="empty">该分类暂无题目</div>';return;
+  }
+  const letters='ABCDEFGH';
+  grid.innerHTML=qs.map(q=>{
+    const ci=q.answer?q.answer.charCodeAt(0)-65:-1;
+    return `<div class="card">
+      <div class="q">${highlight(q.stem)}</div>
+      <div class="opts">${q.options.map((o,i)=>`<div class="${i===ci?'cr':''}">${letters[i]}. ${highlight(o)}</div>`).join('')}</div>
+      <div class="ans">✅ 正确答案：${q.answer}</div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSidebar(){
+  const s=document.getElementById('sidebar'),b=document.getElementById('tb');
+  s.classList.toggle('clps');b.classList.toggle('shift');
+  b.textContent=s.classList.contains('clps')?'▶':'◀';
+}
+document.addEventListener('DOMContentLoaded',()=>switchSub('waike'));
+</script>
+</body>
+</html>
