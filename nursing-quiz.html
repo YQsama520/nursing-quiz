@@ -139,6 +139,9 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
 .search-result-card .src-opts{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--text-dim);line-height:1.5}
 .search-result-card .src-id{font-size:11px;color:#555;margin-top:4px}
 .search-result-card .src-match{background:rgba(212,168,83,.2);color:var(--gold);font-weight:700;padding:0 2px;border-radius:2px}
+.search-count{font-size:13px;color:var(--text-dim);margin-bottom:12px;padding:0 4px}
+.search-count span{color:var(--gold);font-weight:600}
+.src-num{color:var(--gold);font-weight:700;margin-right:6px}
 .search-empty{margin-top:12px;padding:40px;text-align:center;color:var(--text-dim);font-size:14px}
 
 /* ─── Random settings ─── */
@@ -422,6 +425,8 @@ let isRandom = false;
 let randomPool = [];
 let answered = false;
 let isWrongReview = false;
+let isSearchNav = false;
+let searchResultQuestions = [];
 
 // ─── 考点高亮（与思维导图同步）───
 const HL = [
@@ -511,6 +516,7 @@ function startSubject(id, randomMode = false) {
   currentSubject = subj;
   isRandom = randomMode;
   isWrongReview = false;
+  isSearchNav = false;
 
   if (randomMode) {
     // Create random pool from all questions
@@ -685,7 +691,13 @@ function renderControls() {
   let html = '';
   if (hasPrev) html += '<button class="btn-outline" onclick="prevQuestion()">◀ 上一题</button>';
   if (hasNext) html += '<button class="btn-gold" id="nextBtn" onclick="nextQuestion()">下一题 ▶</button>';
-  if (!hasNext) html += '<button class="btn-cyan" onclick="showPage(\'home\')">✅ 完成！返回科目</button>';
+  if (!hasNext) {
+    if (isSearchNav) {
+      html += '<button class="btn-outline" onclick="exitSearchNav()">返回搜索</button>';
+    } else {
+      html += '<button class="btn-cyan" onclick="showPage(\'home\')">✅ 完成！返回科目</button>';
+    }
+  }
 
   div.innerHTML = html;
 }
@@ -716,6 +728,12 @@ function exitWrong() {
   currentSubject = null;
 }
 
+function exitSearchNav() {
+  isSearchNav = false;
+  showPage('home');
+  currentSubject = null;
+}
+
 function updateRandomCount() {
   document.getElementById('randomCount').textContent = randomPool.length - currentIndex;
 }
@@ -730,6 +748,9 @@ function showQuizEnd() {
     isWrongReview = false;
     document.getElementById('wrongBar').style.display = 'none';
     document.getElementById('qControls').innerHTML = '<button class="btn-outline" onclick="showPage(\'wrong\')">📕 返回错题本</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
+  } else if (isSearchNav) {
+    isSearchNav = false;
+    document.getElementById('qControls').innerHTML = '<button class="btn-outline" onclick="exitSearchNav()">返回搜索</button> <button class="btn-cyan" onclick="showPage(\'home\')">返回首页</button>';
   } else {
     document.getElementById('qControls').innerHTML = '<button class="btn-gold" onclick="startSubject(currentSubject.id, isRandom)">🔄 再来一轮</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
   }
@@ -772,7 +793,7 @@ function switchSearchTab(id) {
 
 function doSearch() {
   var kw = document.getElementById('searchInput').value.trim();
-  if (!kw || !searchSubjectId) { document.getElementById('searchResults').classList.remove('show'); return; }
+  if (!kw || !searchSubjectId) { searchResultQuestions = []; document.getElementById('searchResults').classList.remove('show'); return; }
 
   var subj = null;
   for (var i = 0; i < DATA.length; i++) {
@@ -789,6 +810,7 @@ function doSearch() {
       results.push({ q: q, idx: i, matchIn: 'options' });
     }
   }
+  searchResultQuestions = results.map(function(r) { return r.q; });
   renderSearchResults(results, kw);
 }
 
@@ -797,6 +819,7 @@ function renderSearchResults(results, kw) {
   var clearBtn = document.getElementById('searchClear');
 
   if (results.length === 0) {
+    searchResultQuestions = [];
     div.innerHTML = '<div class="search-empty">😕 没找到匹配的题目，换个关键词试试</div>';
     div.classList.add('show');
     clearBtn.style.display = 'inline-block';
@@ -809,7 +832,7 @@ function renderSearchResults(results, kw) {
     if (DATA[i].id === searchSubjectId) { subjName = DATA[i].name; break; }
   }
 
-  var html = '';
+  var html = '<div class="search-count">共找到 <span>' + results.length + '</span> 个结果</div>';
   for (var i = 0; i < results.length; i++) {
     var r = results[i];
     var stemHL = highlightMatch(r.q.stem, kw);
@@ -822,8 +845,8 @@ function renderSearchResults(results, kw) {
     var ellipsis = r.q.options.length > 4 ? '<span style="color:#555">…</span>' : '';
     var section = r.q.section || subjName;
 
-    html += '<div class="search-result-card" onclick="navigateToSearch(\'' + searchSubjectId + '\', ' + r.idx + ')">'
-      + '<div class="src-subject">' + section + ' · 第' + r.q.id + '题</div>'
+    html += '<div class="search-result-card" onclick="navigateToSearchResult(' + i + ')">'
+      + '<div class="src-subject"><span class="src-num">' + (i+1) + '.</span>' + section + ' · 第' + r.q.id + '题</div>'
       + '<div class="src-stem">' + stemHL + '</div>'
       + '<div class="src-opts">' + optsHtml + ellipsis + '</div>'
       + '<div class="src-id">' + (r.matchIn === 'stem' ? '📝 题干匹配' : '✅ 选项匹配') + '</div>'
@@ -857,7 +880,26 @@ function navigateToSearch(subjectId, idx) {
   showQuestion();
 }
 
+function navigateToSearchResult(resultIdx) {
+  if (resultIdx < 0 || resultIdx >= searchResultQuestions.length) return;
+  var subj = null;
+  for (var i = 0; i < DATA.length; i++) {
+    if (DATA[i].id === searchSubjectId) { subj = DATA[i]; break; }
+  }
+  if (!subj) return;
+  currentSubject = subj;
+  currentIndex = resultIdx;
+  currentQuestions = searchResultQuestions;
+  isSearchNav = true;
+  isWrongReview = false;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showPage('quiz');
+  showQuestion();
+}
+
 function clearSearch() {
+  searchResultQuestions = [];
   document.getElementById('searchInput').value = '';
   document.getElementById('searchResults').classList.remove('show');
   document.getElementById('searchClear').style.display = 'none';
