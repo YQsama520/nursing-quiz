@@ -826,16 +826,25 @@ function closeEnc() { document.getElementById('encPopup').classList.remove('show
 
 function checkSubjectDone(subjId) {
   var p = state[subjId];
-  if (!p || !p.wrongIds || p.wrongIds.length > 0) return false;
-  // Also check if there are fixedIds (was in wrong review)
+  if (!p || !p.wrongIds || p.wrongIds.length === 0) return false;
   if (!p.fixedIds || p.fixedIds.length === 0) return false;
+  // All historical wrong questions must have been fixed
+  for (var i = 0; i < p.wrongIds.length; i++) {
+    if (p.fixedIds.indexOf(p.wrongIds[i]) === -1) return false;
+  }
   return true;
 }
 
 function checkAllDone() {
   for (var i = 0; i < DATA.length; i++) {
     var p = state[DATA[i].id];
-    if (p && p.wrongIds && p.wrongIds.length > 0) return false;
+    if (p && p.wrongIds && p.wrongIds.length > 0) {
+      // Check if ALL historical wrongs have been fixed
+      if (!p.fixedIds) return false;
+      for (var j = 0; j < p.wrongIds.length; j++) {
+        if (p.fixedIds.indexOf(p.wrongIds[j]) === -1) return false;
+      }
+    }
   }
   return true;
 }
@@ -875,14 +884,11 @@ function saveAnswer(q, correct, letter) {
   const wrongSet = new Set(p.wrongIds || []);
   if (!p.fixedIds) p.fixedIds = [];
   if (correct) {
-    wrongSet.delete(key);
     if (isWrongReview && p.fixedIds.indexOf(key) === -1) {
       p.fixedIds.push(key);
     }
   } else {
     wrongSet.add(key);
-    var fi = p.fixedIds.indexOf(key);
-    if (fi !== -1) p.fixedIds.splice(fi, 1);
   }
   p.wrongIds = [...wrongSet];
 
@@ -1003,7 +1009,7 @@ function renderWrongTabs() {
   var html = '<button class="wrong-tab' + (wrongFilter === 'all' ? ' active' : '') + '" onclick="switchWrongTab(\'all\')">全部</button>';
   DATA.forEach(function(s) {
     var p = state[s.id];
-    var count = p && p.wrongIds ? p.wrongIds.length : 0;
+    var count = p && p.wrongIds ? p.wrongIds.filter(function(k) { return !p.fixedIds || p.fixedIds.indexOf(k) === -1; }).length : 0;
     if (count > 0) {
       html += '<button class="wrong-tab' + (wrongFilter === s.id ? ' active' : '') + '" onclick="switchWrongTab(\'' + s.id + '\')">' + s.name + ' (' + count + ')</button>';
     }
@@ -1042,12 +1048,26 @@ function renderWrong() {
     }
     return;
   }
-  div.innerHTML = items.map(function(item) {
+    var unfixedItems = [];
+  var fixedItems = [];
+  items.forEach(function(item) {
+    var p = state[item.subject.id];
+    if (p && p.fixedIds && p.fixedIds.indexOf(item.key) !== -1) {
+      fixedItems.push(item);
+    } else {
+      unfixedItems.push(item);
+    }
+  });
+  var sortedItems = unfixedItems.concat(fixedItems);
+  div.innerHTML = sortedItems.map(function(item) {
     var key = item.key || String(item.question.id);
     var stemShow = item.question.stem.length > 80 ? item.question.stem.slice(0, 80) + '...' : item.question.stem;
-    return '<div class="wrong-item" onclick="startAtKey(\'' + item.subject.id + '\', \'' + key.replace(/'/g, "\\'") + '\')"><div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div><div class="wi-stem">' + stemShow + '</div><div><span class="wi-wrong">你的答案: ✗</span><span class="wi-answer"> 正确答案: ' + item.question.answer + '</span></div></div>';
-  }).join('');
-  renderFixedSection();
+    var p = state[item.subject.id];
+    var isFixed = p && p.fixedIds && p.fixedIds.indexOf(item.key) !== -1;
+    var borderStyle = isFixed ? ' style="border-left-color:var(--green)"' : '';
+    var statusHtml = isFixed ? '<span class="wi-answer">✅ 已修复（曾答错）</span>' : '<span class="wi-wrong">你的答案: ✗</span><span class="wi-answer"> 正确答案: ' + item.question.answer + '</span>';
+    return '<div class="wrong-item"' + borderStyle + ' onclick="startAtKey(\'' + item.subject.id + '\', \'' + key.replace(/'/g, "\\'") + '\')"><div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div><div class="wi-stem">' + stemShow + '</div><div>' + statusHtml + '</div></div>';
+  }).join('');  renderFixedSection();
 }
 
 function redoAllWrong() {
@@ -1057,6 +1077,7 @@ function redoAllWrong() {
     var p = state[s.id];
     if (!p || !p.wrongIds || p.wrongIds.length === 0) return;
     p.wrongIds.forEach(function(id) {
+        if (p.fixedIds && p.fixedIds.indexOf(id) !== -1) return;
       var q = findQ(s, id);
       if (q) allWrong.push({ subject: s, question: q, key: id });
     });
@@ -1352,7 +1373,7 @@ function resetWrong() {
     delete p.choices[k];
     delete p.results[k];
   });
-  p.wrongIds = [];
+  p.fixedIds = [];
   p.correct = 0;
   p.wrong = 0;
   p.done = 0;
