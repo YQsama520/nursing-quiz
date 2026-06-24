@@ -193,6 +193,25 @@ body.cute-mode #styleToggle{border-color:#e84393;color:#e84393;background:rgba(2
 #sparkleLayer{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
 .sparkle{position:absolute;font-size:16px;animation:sparkleFall linear infinite;opacity:0}
 @keyframes sparkleFall{0%{transform:translateY(-20px) rotate(0deg);opacity:0}10%{opacity:.6}90%{opacity:.6}100%{transform:translateY(100vh) rotate(360deg);opacity:0}}
+/* Wrong Tabs */
+.wrong-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.wrong-tab{padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s}
+.wrong-tab:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.wrong-tab.active{background:rgba(212,168,83,.1);border-color:rgba(212,168,83,.3);color:var(--gold)}
+
+/* ─── Encouragement Popup ─── */
+.enc-popup{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.enc-popup.show{display:flex}
+.enc-card{background:var(--card);border-radius:24px;padding:40px 32px 28px;max-width:380px;width:100%;text-align:center;border:2px solid var(--gold);animation:encPop .4s ease;position:relative;overflow:hidden}
+.enc-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,var(--gold),transparent 70%);opacity:.08}
+@keyframes encPop{0%{transform:scale(.5) rotate(-5deg);opacity:0}60%{transform:scale(1.05) rotate(1deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+.enc-card .enc-icon{font-size:56px;margin-bottom:12px;display:block;animation:encBounce 1s ease infinite}
+@keyframes encBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.enc-card h3{font-size:20px;font-weight:700;color:var(--gold);margin-bottom:8px;line-height:1.5}
+.enc-card p{font-size:14px;color:var(--text-dim);line-height:1.7;margin-bottom:16px}
+.enc-card .enc-btn{display:inline-block;padding:10px 32px;border-radius:20px;border:none;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#fff;font-size:15px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s}
+.enc-card .enc-btn:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(233,30,99,.3)}
+
 @media(max-width:600px){
   .app{padding:16px 12px 80px}
   .subjects{grid-template-columns:1fr 1fr;gap:12px}
@@ -267,7 +286,11 @@ body.cute-mode #styleToggle{border-color:#e84393;color:#e84393;background:rgba(2
   <div class="page" id="pageWrong">
     <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">📕 错题本</h2>
     <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">答错的题都在这里，点击可重新练习</p>
+    <div class="wrong-tabs" id="wrongTabs"></div>
+    <button class="btn-red" onclick="redoAllWrong()" style="padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;font-size:13px;margin-bottom:16px">🔄 重做所有错题</button>
+    <div id="fixedList" style="margin-bottom:16px"></div>
     <div class="wrong-list" id="wrongList"></div>
+    <div class="wrong-list" id="fixedWrongList"></div>
   </div>
 
   <!-- ═══ Page: Bookmarks ═══ -->
@@ -310,6 +333,16 @@ body.cute-mode #styleToggle{border-color:#e84393;color:#e84393;background:rgba(2
       <div style="font-size:28px;margin-top:12px">💕 🎀 💖</div>
     </div>
   </div>
+
+<!-- ═══ Encouragement Popup ═══ -->
+<div class="enc-popup" id="encPopup">
+  <div class="enc-card">
+    <span class="enc-icon" id="encIcon">🌟</span>
+    <h3 id="encTitle">宝宝太棒了！</h3>
+    <p id="encText">全部答对了！</p>
+    <button class="enc-btn" onclick="closeEnc()">谢谢 🥰</button>
+  </div>
+</div>
 
 </div>
 
@@ -430,6 +463,7 @@ let isRandom = false;
 let randomPool = [];
 let answered = false;
 let isWrongReview = false;
+let wrongFilter = 'all';
 
 // ─── Init ───
 function init() {
@@ -523,6 +557,13 @@ function startSubject(id, randomMode = false) {
 // ═══════════════════════════════════════════════════════════
 // Quiz
 // ═══════════════════════════════════════════════════════════
+function findSubject(q) {
+  for (var i = 0; i < DATA.length; i++) {
+    if (DATA[i].questions.indexOf(q) !== -1) return DATA[i];
+  }
+  return null;
+}
+
 function showQuestion() {
   if (!currentSubject || currentIndex >= currentQuestions.length) {
     showQuizEnd();
@@ -530,6 +571,9 @@ function showQuestion() {
   }
 
   const q = currentQuestions[currentIndex];
+  // Auto-detect subject for multi-subject review sessions
+  const actualSubj = findSubject(q);
+  if (actualSubj) currentSubject = actualSubj;
   const p = currentSubject ? state[currentSubject.id] : null;
   const key = qKey(q);
   const savedLetter = p && p.choices ? p.choices[key] : null;
@@ -674,7 +718,13 @@ function renderControls() {
   let html = '';
   if (hasPrev) html += '<button class="btn-outline" onclick="prevQuestion()">◀ 上一题</button>';
   if (hasNext) html += '<button class="btn-gold" id="nextBtn" onclick="nextQuestion()">下一题 ▶</button>';
-  if (!hasNext) html += '<button class="btn-cyan" onclick="showPage(\'home\')">✅ 完成！返回科目</button>';
+  if (!hasNext) {
+    if (isWrongReview) {
+      html += '<button class="btn-cyan" onclick="showPage(\'wrong\'); isWrongReview=false">✅ 完成复习，查看结果</button>';
+    } else {
+      html += '<button class="btn-cyan" onclick="showPage(\'home\')">✅ 完成！返回科目</button>';
+    }
+  }
 
   div.innerHTML = html;
 }
@@ -734,6 +784,56 @@ function shuffle(arr) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Encouragement
+// ═══════════════════════════════════════════════════════════
+var ENC_MSGS = {
+  yc_总论: { icon: '💪', msg: '总论满分通过！对药理学基础掌握得真扎实！' },
+  yc_传出神经: { icon: '🧠', msg: '传出神经系统全对！宝宝太厉害了！' },
+  yc_中枢神经: { icon: '✨', msg: '中枢神经全部拿下！宝宝真聪明！' },
+  yc_心血管: { icon: '❤️', msg: '心血管系统全通关！宝宝太棒了！' },
+  yc_血液: { icon: '🩸', msg: '血液系统全对！状态拉满！' },
+  yc_化学治疗: { icon: '🎯', msg: '化疗药物全部答对！宝宝无敌了！' },
+  yc_内脏药理: { icon: '🌟', msg: '内脏药理全掌握！宝宝好厉害！' },
+  yc_综合题库: { icon: '👑', msg: '综合题库全对！宝宝是最棒的！' },
+  waike: { icon: '🏆', msg: '外科护理全通关！大神级别！' },
+  infect: { icon: '📚', msg: '传染病全部拿下！学霸本霸！' },
+  ped: { icon: '👶', msg: '儿科满分！超有爱！' },
+  emerg: { icon: '🚀', msg: '急危重症全部攻克！太强了！' },
+};
+
+var ALL_DONE_MSGS = [
+  { icon: '🌟', msg: '所有错题全部攻克！宝宝是天才吗！' },
+  { icon: '🎉', msg: '完美通关！没有什么能难倒我家宝宝！' },
+  { icon: '👸', msg: '错题清零！宝宝最棒了！奖励一朵小红花🌺' },
+  { icon: '🌈', msg: '全部答对！今晚加鸡腿！🍗' },
+  { icon: '🏅', msg: '学霸认证！错题本已清空！' },
+];
+
+function showEnc(icon, title, text) {
+  document.getElementById('encIcon').textContent = icon;
+  document.getElementById('encTitle').textContent = title;
+  document.getElementById('encText').textContent = text;
+  document.getElementById('encPopup').classList.add('show');
+}
+function closeEnc() { document.getElementById('encPopup').classList.remove('show'); }
+
+function checkSubjectDone(subjId) {
+  var p = state[subjId];
+  if (!p || !p.wrongIds || p.wrongIds.length > 0) return false;
+  // Also check if there are fixedIds (was in wrong review)
+  if (!p.fixedIds || p.fixedIds.length === 0) return false;
+  return true;
+}
+
+function checkAllDone() {
+  for (var i = 0; i < DATA.length; i++) {
+    var p = state[DATA[i].id];
+    if (p && p.wrongIds && p.wrongIds.length > 0) return false;
+  }
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════
 // Progress Saving
 // ═══════════════════════════════════════════════════════════
 function saveAnswer(q, correct, letter) {
@@ -766,10 +866,16 @@ function saveAnswer(q, correct, letter) {
 
   // Manage wrong IDs
   const wrongSet = new Set(p.wrongIds || []);
+  if (!p.fixedIds) p.fixedIds = [];
   if (correct) {
     wrongSet.delete(key);
+    if (isWrongReview && p.fixedIds.indexOf(key) === -1) {
+      p.fixedIds.push(key);
+    }
   } else {
     wrongSet.add(key);
+    var fi = p.fixedIds.indexOf(key);
+    if (fi !== -1) p.fixedIds.splice(fi, 1);
   }
   p.wrongIds = [...wrongSet];
 
@@ -781,6 +887,28 @@ function saveAnswer(q, correct, letter) {
   saveState(state);
   renderSubjects();
   renderStats();
+
+  // Encouragement check
+  if (isWrongReview && correct) {
+    var subjId = currentSubject.id;
+    var subjP = state[subjId];
+    var subjDone = subjP && (!subjP.wrongIds || subjP.wrongIds.length === 0) && subjP.fixedIds && subjP.fixedIds.length > 0;
+    if (subjDone) {
+      var encMsg = ENC_MSGS[subjId];
+      if (encMsg) {
+        setTimeout(function() {
+          showEnc(encMsg.icon, '🎉 恭喜宝宝！', encMsg.msg);
+        }, 300);
+      }
+      // Check if ALL subjects are done
+      if (checkAllDone()) {
+        var allMsg = ALL_DONE_MSGS[Math.floor(Math.random() * ALL_DONE_MSGS.length)];
+        setTimeout(function() {
+          showEnc(allMsg.icon, '🌟 完美通关！', allMsg.msg);
+        }, 600);
+      }
+    }
+  }
 }
 
 function getSubjectProgress(id) {
@@ -862,40 +990,129 @@ function countBookmarks() {
 // ═══════════════════════════════════════════════════════════
 // Wrong Questions
 // ═══════════════════════════════════════════════════════════
+function renderWrongTabs() {
+  var tabs = document.getElementById('wrongTabs');
+  if (!tabs) return;
+  var html = '<button class="wrong-tab' + (wrongFilter === 'all' ? ' active' : '') + '" onclick="switchWrongTab(\'all\')">全部</button>';
+  DATA.forEach(function(s) {
+    var p = state[s.id];
+    var count = p && p.wrongIds ? p.wrongIds.length : 0;
+    if (count > 0) {
+      html += '<button class="wrong-tab' + (wrongFilter === s.id ? ' active' : '') + '" onclick="switchWrongTab(\'' + s.id + '\')">' + s.name + ' (' + count + ')</button>';
+    }
+  });
+  tabs.innerHTML = html;
+}
+
+function switchWrongTab(id) {
+  wrongFilter = id;
+  renderWrongTabs();
+  renderWrong();
+}
+
 function renderWrong() {
-  let items = [];
-  DATA.forEach(s => {
-    const p = state[s.id];
+  renderWrongTabs();
+
+  var items = [];
+  DATA.forEach(function(s) {
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) return;
+    var p = state[s.id];
     if (!p || !p.wrongIds || p.wrongIds.length === 0) return;
-    p.wrongIds.forEach(id => {
-      const q = findQ(s, id);
+    p.wrongIds.forEach(function(id) {
+      var q = findQ(s, id);
       if (q) items.push({ subject: s, question: q, key: id });
     });
   });
 
-  const div = document.getElementById('wrongList');
+  var div = document.getElementById('wrongList');
   if (items.length === 0) {
-    div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>没有错题，继续保持！</p></div>';
+    renderFixedSection();
+    var hasFixed = document.getElementById('fixedList').innerHTML.trim() !== '';
+    if (hasFixed) {
+      div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>全部已修复！太棒了！</p></div>';
+    } else {
+      div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>没有错题，继续保持！</p></div>';
+    }
     return;
   }
-
-  div.innerHTML = items.map(item => {
-    const key = item.key || String(item.question.id);
-    return `<div class="wrong-item" onclick="startAtKey('${item.subject.id}', '${key.replace(/'/g, "\\'")}')">
-      <div class="wi-head">
-        <span>${item.subject.name}</span>
-        <span>#${item.question.id}</span>
-      </div>
-      <div class="wi-stem">${item.question.stem.slice(0, 80)}${item.question.stem.length > 80 ? '...' : ''}</div>
-      <div>
-        <span class="wi-wrong">你的答案: ✗</span>
-        <span class="wi-answer"> 正确答案: ${item.question.answer}</span>
-      </div>
-    </div>`;
+  div.innerHTML = items.map(function(item) {
+    var key = item.key || String(item.question.id);
+    var stemShow = item.question.stem.length > 80 ? item.question.stem.slice(0, 80) + '...' : item.question.stem;
+    return '<div class="wrong-item" onclick="startAtKey(\'' + item.subject.id + '\', \'' + key.replace(/'/g, "\\'") + '\')"><div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div><div class="wi-stem">' + stemShow + '</div><div><span class="wi-wrong">你的答案: ✗</span><span class="wi-answer"> 正确答案: ' + item.question.answer + '</span></div></div>';
   }).join('');
+  renderFixedSection();
 }
 
-// ═══════════════════════════════════════════════════════════
+function redoAllWrong() {
+  var allWrong = [];
+  DATA.forEach(function(s) {
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) return;
+    var p = state[s.id];
+    if (!p || !p.wrongIds || p.wrongIds.length === 0) return;
+    p.wrongIds.forEach(function(id) {
+      var q = findQ(s, id);
+      if (q) allWrong.push({ subject: s, question: q, key: id });
+    });
+  });
+  if (allWrong.length === 0) return;
+  // Clear fixed tracking for a fresh start
+  DATA.forEach(function(s) {
+    var p = state[s.id];
+    if (p) p.fixedIds = [];
+  });
+
+  // Build a flat list of questions from all subjects
+  var allQs = [];
+  // Group by subject first for better UX
+  var seen = {};
+  allWrong.forEach(function(item) {
+    if (!seen[item.subject.id]) {
+      seen[item.subject.id] = { subject: item.subject, questions: [] };
+    }
+    seen[item.subject.id].questions.push(item.question);
+  });
+  // Flatten: all questions from first subject, then second, etc.
+  Object.keys(seen).forEach(function(sid) {
+    seen[sid].questions.forEach(function(q) {
+      allQs.push({ subject: seen[sid].subject, question: q });
+    });
+  });
+
+  isWrongReview = true;
+  currentSubject = allQs[0].subject;
+  currentQuestions = allQs.map(function(item) { return item.question; });
+  currentIndex = 0;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showPage('quiz');
+  showQuestion();
+}
+
+function renderFixedSection() {
+  var div = document.getElementById('fixedList');
+  var items = [];
+  DATA.forEach(function(s) {
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) return;
+    var p = state[s.id];
+    if (!p || !p.fixedIds || p.fixedIds.length === 0) return;
+    p.fixedIds.forEach(function(id) {
+      var q = findQ(s, id);
+      if (q) items.push({ subject: s, question: q, key: id });
+    });
+  });
+  if (items.length === 0) { div.innerHTML = ''; return; }
+  var html = '<div style="font-size:14px;font-weight:600;color:var(--green);margin-bottom:10px">✅ 已修复的题 (' + items.length + ')</div>';
+  items.forEach(function(item) {
+    var key = item.key || String(item.question.id);
+    var stemShow = item.question.stem.length > 70 ? item.question.stem.slice(0, 70) + '...' : item.question.stem;
+    html += '<div class="wrong-item" style="border-left-color:var(--green)" onclick="startAtKey(\'' + item.subject.id + '\', \'' + key.replace(/'/g, "\\'") + '\')">' +
+      '<div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div>' +
+      '<div class="wi-stem">' + stemShow + '</div>' +
+      '<div><span class="wi-answer">✅ 已答对</span></div></div>';
+  });
+  div.innerHTML = html;
+}
+
 // Bookmarks
 // ═══════════════════════════════════════════════════════════
 function renderBookmarks() {
@@ -955,16 +1172,45 @@ function startAtKey(subjectId, key) {
   currentSubject = subj;
   isRandom = false;
 
-  const p = state[subjectId];
-  if (p && p.wrongIds && p.wrongIds.length > 0) {
-    currentQuestions = p.wrongIds.map(wid => findQ(subj, wid)).filter(Boolean);
-    currentIndex = currentQuestions.indexOf(q);
-    if (currentIndex === -1) currentIndex = 0;
-    isWrongReview = true;
+  if (wrongFilter === 'all') {
+    // Collect wrong questions from ALL subjects
+    var allWrong = [];
+    DATA.forEach(function(s) {
+      var p = state[s.id];
+      if (!p || !p.wrongIds) return;
+      p.wrongIds.forEach(function(wid) {
+        var wq = findQ(s, wid);
+        if (wq) allWrong.push({ subject: s, question: wq, key: wid });
+      });
+    });
+    if (allWrong.length > 0) {
+      currentQuestions = allWrong.map(function(item) { return item.question; });
+      var foundIdx = -1;
+      for (var i = 0; i < allWrong.length; i++) {
+        if (allWrong[i].question === q) { foundIdx = i; break; }
+      }
+      currentIndex = foundIdx >= 0 ? foundIdx : 0;
+      isWrongReview = true;
+      var fSubj = DATA.find(function(s) { return s.questions.indexOf(q) !== -1; });
+      if (fSubj) currentSubject = fSubj;
+    } else {
+      currentIndex = subj.questions.indexOf(q);
+      currentQuestions = subj.questions;
+      isWrongReview = false;
+    }
   } else {
-    currentIndex = subj.questions.indexOf(q);
-    currentQuestions = subj.questions;
-    isWrongReview = false;
+    // Single subject mode
+    const p = state[subjectId];
+    if (p && p.wrongIds && p.wrongIds.length > 0) {
+      currentQuestions = p.wrongIds.map(wid => findQ(subj, wid)).filter(Boolean);
+      currentIndex = currentQuestions.indexOf(q);
+      if (currentIndex === -1) currentIndex = 0;
+      isWrongReview = true;
+    } else {
+      currentIndex = subj.questions.indexOf(q);
+      currentQuestions = subj.questions;
+      isWrongReview = false;
+    }
   }
 
   document.getElementById('randomBar').style.display = 'none';
