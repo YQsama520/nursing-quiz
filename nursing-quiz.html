@@ -123,6 +123,10 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
 .search-tab{padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s}
 .search-tab:hover{background:rgba(255,255,255,.04);color:var(--text)}
 .search-tab.active{background:rgba(212,168,83,.1);border-color:rgba(212,168,83,.3);color:var(--gold)}
+.search-filters{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.search-filter{padding:4px 14px;border-radius:6px;border:1px solid rgba(255,255,255,.06);background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.search-filter:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.search-filter.active{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.2);color:var(--cyan)}
 .search-bar{display:flex;gap:8px;margin-bottom:12px}
 .search-input{flex:1;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
 .search-input:focus{border-color:var(--gold)}
@@ -219,6 +223,11 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
     <!-- ═══ Search ═══ -->
     <div class="search-area" id="searchArea">
       <div class="search-tabs" id="searchTabs"></div>
+      <div class="search-filters">
+        <button class="search-filter active" data-scope="all" onclick="switchSearchScope('all')">全部</button>
+        <button class="search-filter" data-scope="stem" onclick="switchSearchScope('stem')">题干</button>
+        <button class="search-filter" data-scope="options" onclick="switchSearchScope('options')">选项</button>
+      </div>
       <div class="search-bar">
         <input type="text" class="search-input" id="searchInput" placeholder="搜索题干或选项内容…" onkeydown="if(event.key==='Enter') doSearch()">
         <button class="search-btn" onclick="doSearch()">🔍 搜索</button>
@@ -770,6 +779,17 @@ function shuffle(arr) {
 // ═══════════════════════════════════════════════════════════
 
 var searchSubjectId = null;
+var searchScope = 'all';
+
+function switchSearchScope(scope) {
+  searchScope = scope;
+  var btns = document.querySelectorAll('.search-filter');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].dataset.scope === scope);
+  }
+  var kw = document.getElementById('searchInput').value.trim();
+  if (kw) doSearch();
+}
 
 function initSearch() {
   var tabs = document.getElementById('searchTabs');
@@ -804,10 +824,16 @@ function doSearch() {
   var results = [];
   for (var i = 0; i < subj.questions.length; i++) {
     var q = subj.questions[i];
-    if (q.stem.indexOf(kw) !== -1) {
-      results.push({ q: q, idx: i, matchIn: 'stem' });
-    } else if (q.options.some(function(o) { return o.indexOf(kw) !== -1; })) {
-      results.push({ q: q, idx: i, matchIn: 'options' });
+    if (searchScope === 'stem' || searchScope === 'all') {
+      if (q.stem.indexOf(kw) !== -1) {
+        results.push({ q: q, idx: i, matchIn: 'stem' });
+        continue;
+      }
+    }
+    if (searchScope === 'options' || searchScope === 'all') {
+      if (q.options.some(function(o) { return o.indexOf(kw) !== -1; })) {
+        results.push({ q: q, idx: i, matchIn: 'options' });
+      }
     }
   }
   searchResultQuestions = results.map(function(r) { return r.q; });
