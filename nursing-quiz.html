@@ -235,6 +235,11 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
       <span style="font-size:12px;color:var(--text-dim)">题剩余</span>
       <button class="btn-outline" onclick="exitRandom()" style="padding:4px 12px;font-size:12px">退出</button>
     </div>
+    <div class="random-bar" id="wrongBar" style="display:none;background:rgba(255,107,107,.04);border-color:rgba(255,107,107,.15)">
+      <span class="label">📕 错题复习</span>
+      <span style="font-size:12px;color:var(--text-dim)" id="wrongCount"></span>
+      <button class="btn-outline" onclick="exitWrong()" style="padding:4px 12px;font-size:12px">退出</button>
+    </div>
     <div class="question-header">
       <div style="display:flex;align-items:center;gap:8px">
         <div class="subject-name" id="qSubject"></div>
@@ -416,6 +421,7 @@ let currentIndex = 0;
 let isRandom = false;
 let randomPool = [];
 let answered = false;
+let isWrongReview = false;
 
 // ─── 考点高亮（与思维导图同步）───
 const HL = [
@@ -504,6 +510,7 @@ function startSubject(id, randomMode = false) {
   if (!subj) return;
   currentSubject = subj;
   isRandom = randomMode;
+  isWrongReview = false;
 
   if (randomMode) {
     // Create random pool from all questions
@@ -537,6 +544,14 @@ function showQuestion() {
   const key = qKey(q);
   const savedLetter = p && p.choices ? p.choices[key] : null;
   answered = false;
+
+  // Show wrong review bar
+  if (isWrongReview) {
+    document.getElementById('wrongBar').style.display = 'flex';
+    document.getElementById('wrongCount').textContent = (currentIndex + 1) + '/' + currentQuestions.length + ' 题';
+  } else {
+    document.getElementById('wrongBar').style.display = 'none';
+  }
 
   document.getElementById('qSubject').textContent = currentSubject.name;
   document.getElementById('qNum').textContent = currentIndex + 1;
@@ -692,6 +707,13 @@ function prevQuestion() {
 function exitRandom() {
   showPage('home');
   currentSubject = null;
+  isWrongReview = false;
+}
+
+function exitWrong() {
+  isWrongReview = false;
+  showPage('home');
+  currentSubject = null;
 }
 
 function updateRandomCount() {
@@ -704,7 +726,13 @@ function showQuizEnd() {
   document.getElementById('resultBar').className = 'result-bar correct';
   document.getElementById('resultBar').textContent = '太棒了！所有题目都做完了！';
   document.getElementById('resultBar').style.display = 'block';
-  document.getElementById('qControls').innerHTML = '<button class="btn-gold" onclick="startSubject(currentSubject.id, isRandom)">🔄 再来一轮</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
+  if (isWrongReview) {
+    isWrongReview = false;
+    document.getElementById('wrongBar').style.display = 'none';
+    document.getElementById('qControls').innerHTML = '<button class="btn-outline" onclick="showPage(\'wrong\')">📕 返回错题本</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
+  } else {
+    document.getElementById('qControls').innerHTML = '<button class="btn-gold" onclick="startSubject(currentSubject.id, isRandom)">🔄 再来一轮</button> <button class="btn-outline" onclick="showPage(\'home\')">返回科目</button>';
+  }
   document.getElementById('qProgress').style.width = '100%';
 }
 
@@ -1058,8 +1086,20 @@ function startAtKey(subjectId, key) {
   if (!q) return;
   currentSubject = subj;
   isRandom = false;
-  currentIndex = subj.questions.indexOf(q);
-  currentQuestions = subj.questions;
+
+  // Build wrong-questions-only list so next/prev stays within wrong questions
+  const p = state[subjectId];
+  if (p && p.wrongIds && p.wrongIds.length > 0) {
+    currentQuestions = p.wrongIds.map(wid => findQ(subj, wid)).filter(Boolean);
+    currentIndex = currentQuestions.indexOf(q);
+    if (currentIndex === -1) currentIndex = 0;
+    isWrongReview = true;
+  } else {
+    currentIndex = subj.questions.indexOf(q);
+    currentQuestions = subj.questions;
+    isWrongReview = false;
+  }
+
   document.getElementById('randomBar').style.display = 'none';
   showPage('quiz');
   showQuestion();
