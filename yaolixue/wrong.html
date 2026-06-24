@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>药理学 · 错题本</title>
+<link rel="stylesheet" href="common.css">
+<script src="../questions-data.js"></script>
+<script src="common.js"></script>
+<style>
+/* ─── Page-specific adjustments ─── */
+body{min-height:100vh}
+.btn-red{padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div class="logo">📚 药理学刷题</div>
+    <button id="styleToggle" onclick="toggleStyle()" style="display:none">🎀 可爱</button>
+    <div class="nav-links">
+      <a href="index.html">科目</a>
+      <a href="stats.html">统计</a>
+      <a href="wrong.html" class="active">错题本</a>
+      <a href="bookmarks.html">标记 ⭐</a>
+    </div>
+  </div>
+
+  <!-- ═══ WRONG PAGE ═══ -->
+  <h2>📕 错题本</h2>
+  <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">答错的题都在这里，点击可重新练习</p>
+
+  <div class="search-area" id="wrongSearchArea" style="margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,.02);border-radius:12px;border:1px solid rgba(255,255,255,.04)">
+    <div class="search-bar" style="margin-bottom:0">
+      <input type="text" class="search-input" id="wrongSearchInput" placeholder="在当前错题中搜索…" onkeydown="if(event.key==='Enter') filterWrongQuestions()" style="font-size:13px;padding:8px 12px">
+      <button class="search-btn" onclick="filterWrongQuestions()" style="padding:6px 14px;font-size:13px">🔍</button>
+      <button class="search-clear" id="wrongSearchClear" onclick="clearWrongFilter()" style="display:none">✕</button>
+    </div>
+  </div>
+
+  <div class="wrong-tabs" id="wrongTabs"></div>
+
+  <div style="margin-bottom:16px">
+    <button class="btn-red" onclick="redoAllWrong()" style="padding:8px 20px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit;font-size:13px">🔄 重做所有错题</button>
+  </div>
+
+  <div id="fixedList" style="margin-bottom:16px"></div>
+
+  <div class="wrong-list" id="wrongList"></div>
+
+  <!-- ═══ SPARKLE LAYER ═══ -->
+  <div id="sparkleLayer"></div>
+
+  <!-- ═══ EASTER EGG MODAL ═══ -->
+  <div class="modal-overlay" id="eggModal">
+    <div class="modal" style="background:linear-gradient(145deg,#fff5f9,#fce9f0);border:2px solid #fd79a8;text-align:center;border-radius:24px;max-width:420px">
+      <div style="font-size:48px;margin:10px 0 6px">🌸💗🌸</div>
+      <h3 style="color:#e84393;font-size:24px;margin-bottom:10px">🎀 恭喜宝宝！</h3>
+      <p style="color:#5a1a3a;font-size:15px;line-height:2">
+        你已经完成 <strong style="color:#e84393;font-size:20px">52</strong> 道题啦！🥳<br>
+        解锁了专属于你的<br>
+        <strong style="color:#e84393;font-size:18px">✨ 可爱风格 ✨</strong>
+      </p>
+      <p style="color:#a8638a;font-size:13px;margin-bottom:18px">点下面按钮切换试试看～</p>
+      <button class="btn-gold" onclick="enableCuteMode()" style="padding:12px 32px;font-size:16px;border:none;border-radius:16px;cursor:pointer;font-weight:700;font-family:inherit">🎀 切换可爱风格</button>
+      <br><br>
+      <button onclick="closeEggModal()" style="background:none;border:none;color:#a8638a;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline">下次再说</button>
+      <div style="font-size:28px;margin-top:12px">💕 🎀 💖</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ ENCOURAGEMENT POPUP ═══ -->
+<div class="enc-popup" id="encPopup" onclick="if(event.target===this)closeEnc()">
+  <div class="enc-card">
+    <span class="enc-icon" id="encIcon">🌟</span>
+    <h3 id="encTitle">宝宝太棒了！</h3>
+    <p id="encText">全部答对了！</p>
+    <button class="enc-btn" onclick="closeEnc()">谢谢 🥰</button>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   WRONG QUESTIONS — standalone page
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+var wrongFilter = 'all';
+var wrongSearchKw = '';
+
+/* ─── Wrong question search ─── */
+function filterWrongQuestions() {
+  var kw = document.getElementById('wrongSearchInput').value.trim();
+  wrongSearchKw = kw;
+  document.getElementById('wrongSearchClear').style.display = kw ? 'inline-block' : 'none';
+  renderWrong();
+}
+
+function clearWrongFilter() {
+  document.getElementById('wrongSearchInput').value = '';
+  wrongSearchKw = '';
+  document.getElementById('wrongSearchClear').style.display = 'none';
+  renderWrong();
+}
+
+/* ─── Wrong tabs ─── */
+function renderWrongTabs() {
+  var tabs = document.getElementById('wrongTabs');
+  if (!tabs) return;
+  var html = '<button class="wrong-tab' + (wrongFilter === 'all' ? ' active' : '') + '" onclick="switchWrongTab(\'all\')">全部</button>';
+  for (var si = 0; si < DATA.length; si++) {
+    var s = DATA[si];
+    var p = state[s.id];
+    var count = p && p.wrongIds ? p.wrongIds.filter(function(k) { return !p.fixedIds || p.fixedIds.indexOf(k) === -1; }).length : 0;
+    if (count > 0) {
+      html += '<button class="wrong-tab' + (wrongFilter === s.id ? ' active' : '') + '" onclick="switchWrongTab(\'' + s.id + '\')">' + s.name + ' (' + count + ')</button>';
+    }
+  }
+  tabs.innerHTML = html;
+}
+
+function switchWrongTab(id) {
+  wrongFilter = id;
+  renderWrongTabs();
+  renderWrong();
+}
+
+/* ─── Render wrong list ─── */
+function renderWrong() {
+  renderWrongTabs();
+
+  /* Collect items */
+  var items = [];
+  for (var si = 0; si < DATA.length; si++) {
+    var s = DATA[si];
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) continue;
+    var p = state[s.id];
+    if (!p || !p.wrongIds || p.wrongIds.length === 0) continue;
+    for (var wi = 0; wi < p.wrongIds.length; wi++) {
+      var id = p.wrongIds[wi];
+      var q = findQ(s, id);
+      if (q) items.push({ subject: s, question: q, key: id });
+    }
+  }
+
+  /* Filter by search keyword */
+  if (wrongSearchKw) {
+    var kw = wrongSearchKw.toLowerCase();
+    items = items.filter(function(item) {
+      if (item.question.stem.toLowerCase().indexOf(kw) !== -1) return true;
+      for (var oi = 0; oi < item.question.options.length; oi++) {
+        if (item.question.options[oi].toLowerCase().indexOf(kw) !== -1) return true;
+      }
+      return false;
+    });
+  }
+
+  var div = document.getElementById('wrongList');
+
+  /* Empty state */
+  if (items.length === 0) {
+    renderFixedSection();
+    var fixedDiv = document.getElementById('fixedList');
+    var hasFixed = fixedDiv && fixedDiv.innerHTML.trim() !== '';
+    if (hasFixed) {
+      div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>全部已修复！太棒了！</p></div>';
+    } else {
+      div.innerHTML = '<div class="empty-state"><div class="icon">🎉</div><p>' + (wrongSearchKw ? '没有匹配的错题' : '没有错题，继续保持！') + '</p></div>';
+    }
+    return;
+  }
+
+  /* Split into unfixed and fixed */
+  var unfixedItems = [];
+  var fixedItems = [];
+  for (var ii = 0; ii < items.length; ii++) {
+    var item = items[ii];
+    var p = state[item.subject.id];
+    if (p && p.fixedIds && p.fixedIds.indexOf(item.key) !== -1) {
+      fixedItems.push(item);
+    } else {
+      unfixedItems.push(item);
+    }
+  }
+  var sortedItems = unfixedItems.concat(fixedItems);
+
+  div.innerHTML = sortedItems.map(function(item) {
+    var key = item.key || String(item.question.id);
+    var stemShow = item.question.stem.length > 80 ? item.question.stem.slice(0, 80) + '...' : item.question.stem;
+    var p = state[item.subject.id];
+    var isFixed = p && p.fixedIds && p.fixedIds.indexOf(item.key) !== -1;
+    var markKey = item.subject.id + '_' + key;
+    var isMarked = state.wrongMarks && state.wrongMarks[markKey];
+    var borderStyle = isFixed ? ' style="border-left-color:var(--green)"' : '';
+    var itemClass = 'wrong-item' + (isMarked ? ' marked' : '');
+    var statusHtml = isFixed
+      ? '<span class="wi-answer">✅ 已修复（曾答错）</span>'
+      : '<span class="wi-wrong">你的答案: ✗</span><span class="wi-answer"> 正确答案: ' + escapeHtml(item.question.answer) + '</span>';
+    var markBtn = '<button class="mark-btn' + (isMarked ? ' marked' : '') +
+      '" onclick="event.stopPropagation();toggleWrongMark(\'' + item.subject.id + '\',\'' + key.replace(/'/g, "\\'") + '\')" title="标记">' +
+      (isMarked ? '📌' : '📍') + '</button>';
+    return '<div class="' + itemClass + '"' + borderStyle +
+      ' onclick="location.href=\'wrong-detail.html?subject=' + encodeURIComponent(item.subject.id) + '&key=' + encodeURIComponent(key) + '\'">' +
+      '<div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div>' +
+      '<div class="wi-stem">' + stemShow + '</div>' +
+      '<div>' + statusHtml + '</div>' +
+      '<div class="wrong-actions">' +
+      '<button class="del-btn" onclick="event.stopPropagation();deleteWrongRecord(\'' + item.subject.id + '\',\'' + key.replace(/'/g, "\\'") + '\')" title="删除记录">✕</button>' +
+      markBtn + '</div></div>';
+  }).join('');
+
+  renderFixedSection();
+}
+
+/* ─── Fixed section ─── */
+function renderFixedSection() {
+  var div = document.getElementById('fixedList');
+  var items = [];
+  for (var si = 0; si < DATA.length; si++) {
+    var s = DATA[si];
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) continue;
+    var p = state[s.id];
+    if (!p || !p.fixedIds || p.fixedIds.length === 0) continue;
+    for (var fi = 0; fi < p.fixedIds.length; fi++) {
+      var id = p.fixedIds[fi];
+      var q = findQ(s, id);
+      if (q) items.push({ subject: s, question: q, key: id });
+    }
+  }
+  if (items.length === 0) { div.innerHTML = ''; return; }
+
+  var html = '<div style="font-size:14px;font-weight:600;color:var(--green);margin-bottom:10px">✅ 已修复的题 (' + items.length + ')</div>';
+  for (var ii = 0; ii < items.length; ii++) {
+    var item = items[ii];
+    var key = item.key || String(item.question.id);
+    var stemShow = item.question.stem.length > 70 ? item.question.stem.slice(0, 70) + '...' : item.question.stem;
+    var markKey = item.subject.id + '_' + key;
+    var isMarked = state.wrongMarks && state.wrongMarks[markKey];
+    var itemClass = 'wrong-item' + (isMarked ? ' marked' : '');
+    var markBtn = '<button class="mark-btn' + (isMarked ? ' marked' : '') +
+      '" onclick="event.stopPropagation();toggleWrongMark(\'' + item.subject.id + '\',\'' + key.replace(/'/g, "\\'") + '\')" title="标记">' +
+      (isMarked ? '📌' : '📍') + '</button>';
+    html += '<div class="' + itemClass + '" style="border-left-color:var(--green)"' +
+      ' onclick="location.href=\'wrong-detail.html?subject=' + encodeURIComponent(item.subject.id) + '&key=' + encodeURIComponent(key) + '\'">' +
+      '<div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div>' +
+      '<div class="wi-stem">' + stemShow + '</div>' +
+      '<div><span class="wi-answer">✅ 已答对</span></div>' +
+      '<div class="wrong-actions"><button class="del-btn" onclick="event.stopPropagation();deleteWrongRecord(\'' + item.subject.id + '\',\'' + key.replace(/'/g, "\\'") + '\')" title="删除记录">✕</button>' +
+      markBtn + '</div></div>';
+  }
+  div.innerHTML = html;
+}
+
+/* ─── Wrong record management ─── */
+function deleteWrongRecord(subjectId, key) {
+  if (!confirm('确定删除此错题记录？')) return;
+  var p = state[subjectId];
+  if (!p) return;
+  var idx = p.wrongIds.indexOf(key);
+  if (idx !== -1) p.wrongIds.splice(idx, 1);
+  if (p.fixedIds) {
+    var fi = p.fixedIds.indexOf(key);
+    if (fi !== -1) p.fixedIds.splice(fi, 1);
+  }
+  saveState();
+  renderWrong();
+}
+
+function toggleWrongMark(subjectId, key) {
+  if (!state.wrongMarks) state.wrongMarks = {};
+  var mk = subjectId + '_' + key;
+  if (state.wrongMarks[mk]) { delete state.wrongMarks[mk]; }
+  else { state.wrongMarks[mk] = true; }
+  saveState();
+  renderWrong();
+}
+
+/* ─── Redo all wrong (unfixed only) ─── */
+function redoAllWrong() {
+  var allWrong = [];
+  for (var si = 0; si < DATA.length; si++) {
+    var s = DATA[si];
+    if (wrongFilter !== 'all' && wrongFilter !== s.id) continue;
+    var p = state[s.id];
+    if (!p || !p.wrongIds || p.wrongIds.length === 0) continue;
+    for (var wi = 0; wi < p.wrongIds.length; wi++) {
+      var id = p.wrongIds[wi];
+      if (p.fixedIds && p.fixedIds.indexOf(id) !== -1) continue;
+      var q = findQ(s, id);
+      if (q) allWrong.push({ subject: s.id, key: id });
+    }
+  }
+  if (allWrong.length === 0) return;
+
+  /* Clear fixed tracking for fresh start */
+  for (var ci = 0; ci < DATA.length; ci++) {
+    var ps = state[DATA[ci].id];
+    if (ps) ps.fixedIds = [];
+  }
+  saveState();
+
+  localStorage.setItem('yaoli_wrong_review_list', JSON.stringify(allWrong));
+  localStorage.setItem('yaoli_wrong_review_filter', wrongFilter);
+  location.href = 'quiz.html?review=all';
+}
+
+/* ─── Escape HTML helper ─── */
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+  renderWrong();
+  applyCuteMode();
+  checkEasterEgg();
+});
+</script>
+</body>
+</html>

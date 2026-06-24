@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>药理学 · 答题</title>
+<link rel="stylesheet" href="common.css">
+<script src="../questions-data.js"></script>
+<script src="common.js"></script>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div class="logo">📚 药理学刷题</div>
+    <button id="styleToggle" onclick="toggleStyle()" style="display:none">🎀 可爱</button>
+    <div class="nav-links">
+      <a href="index.html">科目</a>
+      <a href="stats.html">统计</a>
+      <a href="wrong.html">错题本</a>
+      <a href="bookmarks.html">标记 ⭐</a>
+    </div>
+  </div>
+
+  <!-- ═══ MODE BARS ═══ -->
+  <div class="mode-bar random" id="randomBar" style="display:none">
+    <span class="label">🎲 随机模式</span>
+    <span class="count" id="randomCount">0</span>
+    <span style="font-size:12px;color:var(--text-dim)">题剩余</span>
+    <button class="btn-outline" onclick="exitRandom()" style="padding:4px 12px;font-size:12px">退出</button>
+  </div>
+  <div class="mode-bar wrong-review" id="wrongBar" style="display:none">
+    <span class="label">📕 错题复习</span>
+    <span style="font-size:12px;color:var(--text-dim)" id="wrongCount"></span>
+    <button class="btn-outline" onclick="exitWrong()" style="padding:4px 12px;font-size:12px">退出</button>
+  </div>
+
+  <!-- ═══ QUIZ HEADER ═══ -->
+  <div class="quiz-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="subject-name" id="qSubject"></div>
+      <button class="settings-btn" onclick="showSettingsModal()" title="答题设置">⚙️</button>
+    </div>
+    <div class="q-progress"><span id="qNum">0</span>/<span id="qTotal">0</span></div>
+  </div>
+  <div class="progress-track"><div class="fill" id="qProgress" style="width:0%"></div></div>
+
+  <!-- ═══ QUESTION ═══ -->
+  <div style="position:relative">
+    <div class="stem" id="qStem"></div>
+    <button class="bookmark-btn" id="bookmarkBtn" onclick="toggleBookmark()" title="标记本题">☆</button>
+  </div>
+  <div class="options" id="qOptions"></div>
+  <div class="result-bar" id="resultBar"></div>
+  <div class="controls" id="qControls"></div>
+
+  <!-- ═══ SETTINGS MODAL ═══ -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="margin-bottom:0">⚙️ 答题设置</h3>
+        <button onclick="closeSettingsModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div id="settingsModalBody"></div>
+    </div>
+  </div>
+
+  <!-- ═══ SPARKLE LAYER ═══ -->
+  <div id="sparkleLayer"></div>
+
+  <!-- ═══ EASTER EGG MODAL ═══ -->
+  <div class="modal-overlay" id="eggModal">
+    <div class="modal" style="background:linear-gradient(145deg,#fff5f9,#fce9f0);border:2px solid #fd79a8;text-align:center;border-radius:24px;max-width:420px">
+      <div style="font-size:48px;margin:10px 0 6px">🌸💗🌸</div>
+      <h3 style="color:#e84393;font-size:24px;margin-bottom:10px">🎀 恭喜宝宝！</h3>
+      <p style="color:#5a1a3a;font-size:15px;line-height:2">
+        你已经完成 <strong style="color:#e84393;font-size:20px">52</strong> 道题啦！🥳<br>
+        解锁了专属于你的<br>
+        <strong style="color:#e84393;font-size:18px">✨ 可爱风格 ✨</strong>
+      </p>
+      <p style="color:#a8638a;font-size:13px;margin-bottom:18px">点下面按钮切换试试看～</p>
+      <button class="btn-gold" onclick="enableCuteMode()" style="padding:12px 32px;font-size:16px;border:none;border-radius:16px;cursor:pointer;font-weight:700;font-family:inherit">🎀 切换可爱风格</button>
+      <br><br>
+      <button onclick="closeEggModal()" style="background:none;border:none;color:#a8638a;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline">下次再说</button>
+      <div style="font-size:28px;margin-top:12px">💕 🎀 💖</div>
+    </div>
+  </div>
+
+  <!-- ═══ ENCOURAGEMENT POPUP ═══ -->
+  <div class="enc-popup" id="encPopup" onclick="if(event.target===this)closeEnc()">
+    <div class="enc-card">
+      <span class="enc-icon" id="encIcon">🌟</span>
+      <h3 id="encTitle">宝宝太棒了！</h3>
+      <p id="encText">全部答对了！</p>
+      <button class="enc-btn" onclick="closeEnc()">谢谢 🥰</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   QUIZ — Navigation State
+   ═══════════════════════════════════════════════════════════════════════════ */
+var currentSubject = null;
+var currentQuestions = [];
+var currentIndex = 0;
+var isRandom = false;
+var randomPool = [];
+var answered = false;
+var isWrongReview = false;
+var isSearchNav = false;
+var searchResultQuestions = [];
+var searchSubjectId = null;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   URL PARAM READING & INIT
+   ═══════════════════════════════════════════════════════════════════════════ */
+function initQuiz() {
+  var params = new URLSearchParams(window.location.search);
+  var subjectId = params.get('subject');
+  var wrong = params.get('wrong');
+  var indexParam = params.get('index');
+  var review = params.get('review');
+
+  /* review=all or review=single — from wrong page cross-subject review */
+  if (review === 'all' || review === 'single') {
+    var stored = localStorage.getItem('yaoli_wrong_review_list');
+    if (stored) {
+      try {
+        var list = JSON.parse(stored);
+        if (list && list.length > 0) {
+          var allQs = [];
+          list.forEach(function(item) {
+            var subj = DATA.find(function(s) { return s.id === item.subjectId; });
+            if (!subj) return;
+            var q = findQ(subj, item.key);
+            if (q) allQs.push(q);
+          });
+          if (allQs.length > 0) {
+            currentSubject = DATA[0];
+            if (allQs[0]) {
+              var fSubj = findSubject(allQs[0]);
+              if (fSubj) currentSubject = fSubj;
+            }
+            currentQuestions = allQs;
+            currentIndex = 0;
+            isWrongReview = true;
+            isRandom = false;
+            document.getElementById('randomBar').style.display = 'none';
+            document.getElementById('wrongBar').style.display = 'flex';
+            showQuestion();
+            return;
+          }
+        }
+      } catch (e) {}
+    }
+    /* fall through to normal mode if no review list */
+  }
+
+  if (!subjectId) {
+    document.getElementById('qStem').textContent = '⚠️ 未指定科目，请从首页选择';
+    document.getElementById('qOptions').innerHTML = '';
+    document.getElementById('qControls').innerHTML =
+      '<button class="btn-gold" onclick="window.location.href=\'index.html\'">返回首页</button>';
+    return;
+  }
+
+  if (wrong === '1') {
+    /* Wrong review within a single subject */
+    var subj = DATA.find(function(s) { return s.id === subjectId; });
+    if (!subj) return;
+    currentSubject = subj;
+    var p = getSubjectState(subj.id);
+    if (p.wrongIds && p.wrongIds.length > 0) {
+      currentQuestions = p.wrongIds.map(function(wid) { return findQ(subj, wid); }).filter(Boolean);
+      currentIndex = 0;
+      isWrongReview = true;
+      document.getElementById('wrongBar').style.display = 'flex';
+    } else {
+      /* No wrong questions, fall back to normal sequential */
+      currentQuestions = subj.questions;
+      currentIndex = Math.min(p.done || 0, subj.questions.length - 1);
+      isWrongReview = false;
+    }
+    document.getElementById('randomBar').style.display = 'none';
+    showQuestion();
+    return;
+  }
+
+  /* Search navigation: subject=ID&index=N */
+  if (indexParam !== null) {
+    var subj = DATA.find(function(s) { return s.id === subjectId; });
+    if (!subj) return;
+    currentSubject = subj;
+    var p = getSubjectState(subj.id);
+    /* Determine which questions array we're navigating within */
+    /* Default to subject questions; caller should have set context */
+    currentQuestions = subj.questions;
+    currentIndex = parseInt(indexParam) || 0;
+    if (currentIndex >= currentQuestions.length) currentIndex = 0;
+    isSearchNav = true;
+    isWrongReview = false;
+    isRandom = false;
+    document.getElementById('randomBar').style.display = 'none';
+    showQuestion();
+    return;
+  }
+
+  /* Normal sequential mode */
+  var subj = DATA.find(function(s) { return s.id === subjectId; });
+  if (!subj) return;
+  currentSubject = subj;
+  var p = getSubjectState(subj.id);
+  currentIndex = Math.min(p.done || 0, subj.questions.length - 1);
+  currentQuestions = subj.questions;
+  isRandom = false;
+  isWrongReview = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showQuestion();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHOW QUESTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+function showQuestion() {
+  if (!currentSubject || currentIndex >= currentQuestions.length) {
+    showQuizEnd();
+    return;
+  }
+
+  var q = currentQuestions[currentIndex];
+  var actualSubj = findSubject(q);
+  if (actualSubj) currentSubject = actualSubj;
+  var p = getSubjectState(currentSubject.id);
+  var key = qKey(q);
+  var savedLetter = p.choices ? p.choices[key] : null;
+
+  answered = false;
+
+  /* Mode bars */
+  document.getElementById('wrongBar').style.display = isWrongReview ? 'flex' : 'none';
+  if (isWrongReview) {
+    document.getElementById('wrongCount').textContent = (currentIndex + 1) + '/' + currentQuestions.length + ' 题';
+  }
+
+  /* Header */
+  document.getElementById('qSubject').textContent = currentSubject.name;
+  document.getElementById('qNum').textContent = currentIndex + 1;
+  document.getElementById('qTotal').textContent = currentQuestions.length;
+  document.getElementById('qProgress').style.width = (currentIndex / currentQuestions.length * 100) + '%';
+  document.getElementById('qStem').textContent = q.stem;
+
+  /* Options */
+  var optsDiv = document.getElementById('qOptions');
+  var letters = ['A','B','C','D','E','F','G'];
+  optsDiv.innerHTML = q.options.map(function(opt, i) {
+    return '<button class="option-btn" data-letter="' + letters[i] + '" data-index="' + i + '" onclick="selectOption(this, ' + i + ')" disabled>' +
+      '<span class="letter">' + letters[i] + '</span><span>' + opt + '</span></button>';
+  }).join('');
+
+  /* Restore saved answer vs fresh */
+  if (savedLetter && typeof savedLetter === 'string' && !isWrongReview) {
+    /* Normal mode: show saved answer */
+    answered = true;
+    var correctLetter = q.answer;
+    var correctIdx = correctLetter ? correctLetter.charCodeAt(0) - 65 : -1;
+    document.querySelectorAll('.option-btn').forEach(function(b, i) {
+      b.disabled = true;
+      if (i === correctIdx) b.classList.add('correct');
+      if (b.dataset.letter === savedLetter) {
+        b.classList.add(savedLetter === correctLetter ? 'selected' : 'wrong');
+      }
+    });
+    var isCorrect = p.results && p.results[key];
+    var bar = document.getElementById('resultBar');
+    if (!q.hasAnswer) {
+      bar.className = 'result-bar no-answer';
+      bar.textContent = '💡 本题无标准答案，请自行判断';
+      bar.style.display = 'block';
+    } else if (isCorrect) {
+      bar.className = 'result-bar correct';
+      bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
+      bar.style.display = 'block';
+    } else {
+      bar.className = 'result-bar wrong';
+      bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
+      bar.style.display = 'block';
+    }
+  } else {
+    /* Wrong review or unanswered: fresh attempt */
+    if (isWrongReview) {
+      /* Wrong review: always blank, no saved answer shown */
+      document.getElementById('resultBar').className = 'result-bar';
+      document.getElementById('resultBar').style.display = 'none';
+    }
+    setTimeout(function() {
+      document.querySelectorAll('.option-btn').forEach(function(b) {
+        if (!b.classList.contains('correct') && !b.classList.contains('wrong')) {
+          b.disabled = false;
+        }
+      });
+    }, 50);
+    if (!isWrongReview) {
+      document.getElementById('resultBar').className = 'result-bar';
+      document.getElementById('resultBar').style.display = 'none';
+    }
+  }
+
+  updateBookmarkBtn();
+  renderControls();
+}
+
+function selectOption(btn, idx) {
+  if (answered) return;
+  answered = true;
+
+  var q = currentQuestions[currentIndex];
+  var userLetter = btn.dataset.letter;
+  var correctLetter = q.answer;
+  var correctIdx = correctLetter ? correctLetter.charCodeAt(0) - 65 : -1;
+
+  document.querySelectorAll('.option-btn').forEach(function(b) { b.disabled = true; });
+  document.querySelectorAll('.option-btn').forEach(function(b, i) {
+    if (i === correctIdx) b.classList.add('correct');
+  });
+
+  var isCorrect = userLetter === correctLetter;
+  if (!isCorrect) {
+    btn.classList.add('wrong');
+  } else {
+    btn.classList.add('selected');
+  }
+
+  var bar = document.getElementById('resultBar');
+  if (!q.hasAnswer) {
+    bar.className = 'result-bar no-answer';
+    bar.textContent = '💡 本题无标准答案，请自行判断';
+    bar.style.display = 'block';
+  } else if (isCorrect) {
+    bar.className = 'result-bar correct';
+    bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
+    bar.style.display = 'block';
+  } else {
+    bar.className = 'result-bar wrong';
+    bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
+    bar.style.display = 'block';
+  }
+
+  saveAnswer(q, isCorrect, userLetter);
+  renderControls();
+}
+
+function renderControls() {
+  var div = document.getElementById('qControls');
+  var hasNext = currentIndex < currentQuestions.length - 1;
+  var hasPrev = currentIndex > 0;
+  var html = '';
+  if (hasPrev) html += '<button class="btn-outline" onclick="prevQuestion()">◀ 上一题</button>';
+  if (hasNext) html += '<button class="btn-gold" id="nextBtn" onclick="nextQuestion()">下一题 ▶</button>';
+  if (!hasNext) {
+    if (isWrongReview) {
+      html += '<button class="btn-cyan" onclick="window.location.href=\'wrong.html\'; isWrongReview=false">✅ 完成复习，查看结果</button>';
+    } else if (isSearchNav) {
+      html += '<button class="btn-outline" onclick="exitSearchNav()">返回搜索</button>';
+    } else {
+      html += '<button class="btn-cyan" onclick="window.location.href=\'index.html\'">✅ 完成！返回科目</button>';
+    }
+  }
+  div.innerHTML = html;
+}
+
+function nextQuestion() {
+  if (currentIndex < currentQuestions.length - 1) { currentIndex++; showQuestion(); }
+}
+function prevQuestion() {
+  if (currentIndex > 0) { currentIndex--; showQuestion(); }
+}
+function exitRandom() { window.location.href = 'index.html'; }
+function exitWrong() { window.location.href = 'index.html'; }
+function exitSearchNav() { window.location.href = 'index.html'; }
+function updateRandomCount() {
+  document.getElementById('randomCount').textContent = randomPool.length - currentIndex;
+}
+
+function showQuizEnd() {
+  document.getElementById('qStem').textContent = '🎉 全部完成！';
+  document.getElementById('qOptions').innerHTML = '';
+  document.getElementById('resultBar').className = 'result-bar correct';
+  document.getElementById('resultBar').textContent = '太棒了！所有题目都做完了！';
+  document.getElementById('resultBar').style.display = 'block';
+  if (isWrongReview) {
+    isWrongReview = false;
+    document.getElementById('wrongBar').style.display = 'none';
+    document.getElementById('qControls').innerHTML =
+      '<button class="btn-outline" onclick="window.location.href=\'wrong.html\'">📕 返回错题本</button> ' +
+      '<button class="btn-outline" onclick="window.location.href=\'index.html\'">返回科目</button>';
+  } else if (isSearchNav) {
+    isSearchNav = false;
+    document.getElementById('qControls').innerHTML =
+      '<button class="btn-outline" onclick="window.location.href=\'index.html\'">返回搜索</button> ' +
+      '<button class="btn-cyan" onclick="window.location.href=\'index.html\'">返回首页</button>';
+  } else {
+    document.getElementById('qControls').innerHTML =
+      '<button class="btn-gold" onclick="startSubject(currentSubject.id, isRandom)">🔄 再来一轮</button> ' +
+      '<button class="btn-outline" onclick="window.location.href=\'index.html\'">返回科目</button>';
+  }
+  document.getElementById('qProgress').style.width = '100%';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SAVE ANSWER
+   ═══════════════════════════════════════════════════════════════════════════ */
+function saveAnswer(q, correct, letter) {
+  var id = currentSubject.id;
+  var p = getSubjectState(id);
+  var key = qKey(q);
+  var prevResult = p.results[key];
+
+  /* Count stats (avoid double-counting if already answered correctly) */
+  if (prevResult !== true) {
+    if (correct) { p.correct++; p.done++; }
+    else { p.wrong++; p.done++; }
+  }
+
+  if (letter) p.choices[key] = letter;
+  p.results[key] = correct;
+
+  /* Wrong ID management (permanent record: never delete) */
+  var wrongSet = new Set(p.wrongIds || []);
+  if (!p.fixedIds) p.fixedIds = [];
+  if (correct) {
+    /* Fixed during wrong review only */
+    if (isWrongReview && p.fixedIds.indexOf(key) === -1) {
+      p.fixedIds.push(key);
+    }
+  } else {
+    wrongSet.add(key);
+  }
+  p.wrongIds = Array.from(wrongSet);
+
+  /* Sequential progress (non-random only) */
+  if (!isRandom) {
+    p.done = Math.max(p.done, currentIndex + 1);
+  }
+
+  saveState();
+
+  /* Encouragement check */
+  if (isWrongReview && correct) {
+    var subjDone = checkSubjectDone(id);
+    if (subjDone) {
+      var msg = ENC_MSGS[id];
+      if (msg) {
+        setTimeout(function() { showEnc(msg.icon, '🎉 恭喜宝宝！', msg.msg); }, 300);
+      }
+      if (checkAllDone()) {
+        var allMsg = ALL_DONE_MSGS[Math.floor(Math.random() * ALL_DONE_MSGS.length)];
+        setTimeout(function() { showEnc(allMsg.icon, '🌟 完美通关！', allMsg.msg); }, 600);
+      }
+    }
+  }
+}
+
+function getSubjectProgress(id) {
+  return state[id] || { done:0, correct:0, wrong:0, wrongIds:[], choices:{}, results:{} };
+}
+
+function checkSubjectDone(subjId) {
+  var p = state[subjId];
+  if (!p || !p.wrongIds || p.wrongIds.length === 0) return false;
+  if (!p.fixedIds || p.fixedIds.length === 0) return false;
+  for (var i = 0; i < p.wrongIds.length; i++) {
+    if (p.fixedIds.indexOf(p.wrongIds[i]) === -1) return false;
+  }
+  return true;
+}
+
+function checkAllDone() {
+  for (var i = 0; i < DATA.length; i++) {
+    var p = state[DATA[i].id];
+    if (p && p.wrongIds && p.wrongIds.length > 0) {
+      if (!p.fixedIds) return false;
+      for (var j = 0; j < p.wrongIds.length; j++) {
+        if (p.fixedIds.indexOf(p.wrongIds[j]) === -1) return false;
+      }
+    }
+  }
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOOKMARK
+   ═══════════════════════════════════════════════════════════════════════════ */
+function toggleBookmark() {
+  if (!currentSubject) return;
+  var key = currentSubject.id + '_' + qKey(currentQuestions[currentIndex]);
+  if (!state.bookmarks) state.bookmarks = {};
+  if (state.bookmarks[key]) { delete state.bookmarks[key]; }
+  else { state.bookmarks[key] = true; }
+  saveState();
+  updateBookmarkBtn();
+}
+
+function updateBookmarkBtn() {
+  if (!currentSubject || !currentQuestions[currentIndex]) return;
+  var btn = document.getElementById('bookmarkBtn');
+  var key = currentSubject.id + '_' + qKey(currentQuestions[currentIndex]);
+  if (state.bookmarks && state.bookmarks[key]) {
+    btn.textContent = '⭐'; btn.classList.add('active');
+  } else {
+    btn.textContent = '☆'; btn.classList.remove('active');
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SETTINGS MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+function showSettingsModal() {
+  if (!currentSubject) return;
+  var p = getSubjectState(currentSubject.id);
+  var total = currentSubject.questions.length;
+  var wrongCount = (p.wrongIds || []).length;
+
+  document.getElementById('settingsModalBody').innerHTML =
+    '<div style="font-size:13px;color:var(--text-dim);margin-bottom:16px">当前进度：<span style="color:var(--gold);font-weight:600">' + (p.done||0) + '</span>/' + total + ' 题 · 错题：<span style="color:var(--red);font-weight:600">' + wrongCount + '</span> 题</div>' +
+    '<div class="settings-group"><h4>🔄 全部重新答题</h4><p>清空该科目所有进度，从第 1 题重新开始</p><button class="btn-red" onclick="resetAll()" style="padding:8px 20px;font-size:13px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit">全部重做</button></div>' +
+    '<div class="settings-group"><h4>🔢 选择题号</h4><p>从指定题号继续答题</p><div class="input-row"><span style="font-size:13px;color:var(--text-dim)">从第</span><input type="number" id="resetFromInput" value="1" min="1" max="' + total + '"><span style="font-size:13px;color:var(--text-dim)">题开始</span><button class="btn-outline" onclick="resetFromQuestion()" style="padding:6px 16px;font-size:12px;border-radius:6px">确定</button></div></div>' +
+    '<div class="settings-group"><h4>🎲 随机抽题</h4><p>从题库中随机抽取指定数量的题目</p><div class="input-row"><input type="number" id="resetRandomInput" value="50" min="1" max="' + total + '"><span style="font-size:13px;color:var(--text-dim)">题</span><button class="btn-cyan" onclick="resetRandom()" style="padding:6px 16px;font-size:12px;border-radius:6px;border:none;cursor:pointer;font-weight:600;font-family:inherit">开始</button></div></div>' +
+    '<div class="settings-group"><h4>❌ 只重做错题</h4><p>清空修复记录，所有历史错题变回"未修复"状态</p><button class="btn-gold" onclick="resetWrong()" style="padding:8px 20px;font-size:13px;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-family:inherit"' +
+    (wrongCount === 0 ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') + '>重做错题' + (wrongCount > 0 ? ' <span class="badge-count">' + wrongCount + '</span>' : '') + '</button>' +
+    (wrongCount === 0 ? '<div style="font-size:11px;color:var(--green);margin-top:6px">✅ 暂无错题</div>' : '') +
+    '</div>';
+
+  document.getElementById('settingsModal').classList.add('show');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.remove('show');
+}
+
+function resetAll() {
+  if (!currentSubject) return;
+  state[currentSubject.id] = { done:0, correct:0, wrong:0, wrongIds:[], choices:{}, results:{} };
+  saveState();
+  closeSettingsModal();
+  currentIndex = 0;
+  currentQuestions = currentSubject.questions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showQuestion();
+}
+
+function resetFromQuestion() {
+  if (!currentSubject) return;
+  var num = parseInt(document.getElementById('resetFromInput').value);
+  if (num < 1 || num > currentSubject.questions.length) return;
+  currentIndex = num - 1;
+  currentQuestions = currentSubject.questions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  closeSettingsModal();
+  showQuestion();
+}
+
+function resetRandom() {
+  if (!currentSubject) return;
+  var count = parseInt(document.getElementById('resetRandomInput').value);
+  if (count < 1) count = 1;
+  if (count > currentSubject.questions.length) count = currentSubject.questions.length;
+  var indices = currentSubject.questions.map(function(_, i) { return i; });
+  shuffle(indices);
+  randomPool = indices.slice(0, count);
+  currentIndex = 0;
+  currentQuestions = randomPool.map(function(i) { return currentSubject.questions[i]; });
+  isRandom = true;
+  document.getElementById('randomBar').style.display = 'flex';
+  updateRandomCount();
+  closeSettingsModal();
+  showQuestion();
+}
+
+function resetWrong() {
+  if (!currentSubject) return;
+  var p = getSubjectState(currentSubject.id);
+  p.fixedIds = [];
+  saveState();
+  currentQuestions = [];
+  closeSettingsModal();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   START SUBJECT (for "再来一轮" at quiz end)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function startSubject(id, randomMode) {
+  if (randomMode === undefined) randomMode = false;
+  var subj = DATA.find(function(s) { return s.id === id; });
+  if (!subj) return;
+  currentSubject = subj;
+  isRandom = randomMode;
+  isWrongReview = false;
+  isSearchNav = false;
+
+  if (randomMode) {
+    randomPool = shuffle(subj.questions.map(function(q,i) { return i; }));
+    currentIndex = 0;
+    currentQuestions = randomPool.map(function(i) { return subj.questions[i]; });
+  } else {
+    var p = getSubjectState(id);
+    currentIndex = Math.min(p.done || 0, subj.questions.length - 1);
+    currentQuestions = subj.questions;
+  }
+
+  document.getElementById('randomBar').style.display = randomMode ? 'flex' : 'none';
+  if (randomMode) updateRandomCount();
+  showQuestion();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+  applyCuteMode();
+  initQuiz();
+  checkEasterEgg();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>药理学 · 标记题目</title>
+<link rel="stylesheet" href="common.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ═══ HEADER ═══ -->
+  <div class="header">
+    <div class="logo"><a href="index.html" style="text-decoration:none;background:inherit;-webkit-background-clip:initial;background-clip:initial;background:linear-gradient(135deg,var(--gold),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">📚 药理学刷题</a></div>
+    <button id="styleToggle" onclick="toggleStyle()" style="display:none">🎀 可爱</button>
+    <div class="nav-links">
+      <a href="index.html">科目</a>
+      <a href="stats.html">统计</a>
+      <a href="wrong.html">错题本</a>
+      <a class="active">标记 ⭐</a>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: BOOKMARKS ═══ -->
+  <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">⭐ 标记题目</h2>
+  <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">你拿不准标记过的题目</p>
+  <div class="wrong-list" id="bookmarkList"></div>
+
+  <!-- ═══ SPARKLE LAYER ═══ -->
+  <div id="sparkleLayer"></div>
+
+  <!-- ═══ EASTER EGG MODAL ═══ -->
+  <div class="modal-overlay" id="eggModal">
+    <div class="modal" style="background:linear-gradient(145deg,#fff5f9,#fce9f0);border:2px solid #fd79a8;text-align:center;border-radius:24px;max-width:420px">
+      <div style="font-size:48px;margin:10px 0 6px">🌸💗🌸</div>
+      <h3 style="color:#e84393;font-size:24px;margin-bottom:10px">🎀 恭喜宝宝！</h3>
+      <p style="color:#5a1a3a;font-size:15px;line-height:2">
+        你已经完成 <strong style="color:#e84393;font-size:20px">52</strong> 道题啦！🥳<br>
+        解锁了专属于你的<br>
+        <strong style="color:#e84393;font-size:18px">✨ 可爱风格 ✨</strong>
+      </p>
+      <p style="color:#a8638a;font-size:13px;margin-bottom:18px">点下面按钮切换试试看～</p>
+      <button class="btn-gold" onclick="enableCuteMode()" style="padding:12px 32px;font-size:16px;border:none;border-radius:16px;cursor:pointer;font-weight:700;font-family:inherit">🎀 切换可爱风格</button>
+      <br><br>
+      <button onclick="closeEggModal()" style="background:none;border:none;color:#a8638a;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:underline">下次再说</button>
+      <div style="font-size:28px;margin-top:12px">💕 🎀 💖</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ ENCOURAGEMENT POPUP ═══ -->
+<div class="enc-popup" id="encPopup" onclick="if(event.target===this)closeEnc()">
+  <div class="enc-card">
+    <span class="enc-icon" id="encIcon">🌟</span>
+    <h3 id="encTitle">宝宝太棒了！</h3>
+    <p id="encText">全部答对了！</p>
+    <button class="enc-btn" onclick="closeEnc()">谢谢 🥰</button>
+  </div>
+</div>
+
+<script src="../questions-data.js"></script>
+<script src="common.js"></script>
+<script>
+function renderBookmarks() {
+  var items = [];
+  if (state.bookmarks) {
+    Object.keys(state.bookmarks).forEach(function(key) {
+      var parts = key.split('_');
+      var sid = parts[0];
+      var qid = parts.slice(1).join('_');
+      var s = DATA.find(function(x) { return x.id === sid; });
+      if (!s) return;
+      var q = findQ(s, qid);
+      if (q) items.push({ subject: s, question: q, fullKey: key });
+    });
+  }
+  var div = document.getElementById('bookmarkList');
+  if (items.length === 0) {
+    div.innerHTML = '<div class="empty-state"><div class="icon">⭐</div><p>还没有标记题目</p></div>';
+    return;
+  }
+  div.innerHTML = items.map(function(item) {
+    var stemShow = item.question.stem.length > 80 ? item.question.stem.slice(0, 80) + '...' : item.question.stem;
+    var qid = item.question.section ? encodeURIComponent(item.question.section + '::' + item.question.id) : item.question.id;
+    return '<div class="wrong-item marked" onclick="location.href=\'quiz.html?subject=' + item.subject.id + '&qid=' + qid + '\'">' +
+      '<div class="wi-head"><span>' + item.subject.name + '</span><span>#' + item.question.id + '</span></div>' +
+      '<div class="wi-stem">' + stemShow + '</div>' +
+      '<div style="font-size:11px;color:var(--gold)">⭐ 已标记</div>' +
+      '<div class="wrong-actions"><button class="del-btn" onclick="event.stopPropagation();removeBookmark(\'' + item.fullKey.replace(/'/g, "\\'") + '\')" title="取消标记">✕</button></div></div>';
+  }).join('');
+}
+
+function removeBookmark(fullKey) {
+  if (!state.bookmarks) return;
+  delete state.bookmarks[fullKey];
+  saveState();
+  renderBookmarks();
+}
+
+document.addEventListener('DOMContentLoaded', function() { renderBookmarks(); applyCuteMode(); checkEasterEgg(); });
+</script>
+</body>
+</html>
