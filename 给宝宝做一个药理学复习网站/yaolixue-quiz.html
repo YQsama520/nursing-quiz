@@ -200,7 +200,7 @@ body.cute-mode #styleToggle{border-color:#e84393;color:#e84393;background:rgba(2
 .wrong-tab.active{background:rgba(212,168,83,.1);border-color:rgba(212,168,83,.3);color:var(--gold)}
 
 /* ─── Encouragement Popup ─── */
-.enc-popup{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px}
+.enc-popup{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:center;justify-content:center;padding:20px}
 .enc-popup.show{display:flex}
 .enc-card{background:var(--card);border-radius:24px;padding:40px 32px 28px;max-width:380px;width:100%;text-align:center;border:2px solid var(--gold);animation:encPop .4s ease;position:relative;overflow:hidden}
 .enc-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,var(--gold),transparent 70%);opacity:.08}
@@ -334,16 +334,16 @@ body.cute-mode #styleToggle{border-color:#e84393;color:#e84393;background:rgba(2
     </div>
   </div>
 
+</div>
+
 <!-- ═══ Encouragement Popup ═══ -->
-<div class="enc-popup" id="encPopup">
+<div class="enc-popup" id="encPopup" onclick="if(event.target===this)closeEnc()">
   <div class="enc-card">
     <span class="enc-icon" id="encIcon">🌟</span>
     <h3 id="encTitle">宝宝太棒了！</h3>
     <p id="encText">全部答对了！</p>
     <button class="enc-btn" onclick="closeEnc()">谢谢 🥰</button>
   </div>
-</div>
-
 </div>
 
 <script>
@@ -606,38 +606,45 @@ function showQuestion() {
 
   // Restore saved answer if exists
   if (savedLetter && typeof savedLetter === 'string') {
-    answered = true;
     const correctLetter = q.answer;
     const correctIdx = correctLetter ? correctLetter.charCodeAt(0) - 65 : -1;
-    const savedIdx = savedLetter.charCodeAt(0) - 65;
 
-    document.querySelectorAll('.option-btn').forEach((b, i) => {
-      b.disabled = true;
-      if (i === correctIdx) b.classList.add('correct');
-      if (b.dataset.letter === savedLetter) {
-        if (savedLetter === correctLetter) {
-          b.classList.add('selected');
-        } else {
-          b.classList.add('wrong');
-        }
-      }
-    });
-
-    // Show result
-    const isCorrect = p.results && p.results[key];
-    const bar = document.getElementById('resultBar');
-    if (!q.hasAnswer) {
-      bar.className = 'result-bar no-answer';
-      bar.textContent = '💡 本题无标准答案，请自行判断';
-      bar.style.display = 'block';
-    } else if (isCorrect) {
-      bar.className = 'result-bar correct';
-      bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
-      bar.style.display = 'block';
+    if (isWrongReview) {
+      // Wrong review: show nothing, just let them re-answer fresh
+      answered = false;
+      document.getElementById('resultBar').className = 'result-bar';
+      document.getElementById('resultBar').style.display = 'none';
+      setTimeout(function() {
+        document.querySelectorAll('.option-btn').forEach(function(b) {
+          b.disabled = false;
+        });
+      }, 50);
     } else {
-      bar.className = 'result-bar wrong';
-      bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
-      bar.style.display = 'block';
+      answered = true;
+      document.querySelectorAll('.option-btn').forEach((b, i) => {
+        b.disabled = true;
+        if (i === correctIdx) b.classList.add('correct');
+        if (b.dataset.letter === savedLetter) {
+          b.classList.add(savedLetter === correctLetter ? 'selected' : 'wrong');
+        }
+      });
+
+      // Show result
+      const isCorrect = p.results && p.results[key];
+      const bar = document.getElementById('resultBar');
+      if (!q.hasAnswer) {
+        bar.className = 'result-bar no-answer';
+        bar.textContent = '💡 本题无标准答案，请自行判断';
+        bar.style.display = 'block';
+      } else if (isCorrect) {
+        bar.className = 'result-bar correct';
+        bar.textContent = '✅ 正确！' + (correctLetter ? ' 答案：' + correctLetter : '');
+        bar.style.display = 'block';
+      } else {
+        bar.className = 'result-bar wrong';
+        bar.textContent = '❌ 错误！正确答案是 ' + correctLetter;
+        bar.style.display = 'block';
+      }
     }
   } else {
     // No saved answer — enable buttons after delay
