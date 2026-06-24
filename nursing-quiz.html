@@ -117,6 +117,30 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
 .bookmark-btn:hover{border-color:var(--gold);background:rgba(212,168,83,.08)}
 .bookmark-btn.active{background:rgba(212,168,83,.15);border-color:var(--gold)}
 
+/* ─── Search ─── */
+.search-area{margin-bottom:28px;padding:18px 20px;background:rgba(255,255,255,.02);border-radius:16px;border:1px solid rgba(255,255,255,.04)}
+.search-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.search-tab{padding:6px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:transparent;color:var(--text-dim);font-size:13px;cursor:pointer;font-family:inherit;transition:all .15s}
+.search-tab:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.search-tab.active{background:rgba(212,168,83,.1);border-color:rgba(212,168,83,.3);color:var(--gold)}
+.search-bar{display:flex;gap:8px;margin-bottom:12px}
+.search-input{flex:1;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.2);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.search-input:focus{border-color:var(--gold)}
+.search-input::placeholder{color:#555}
+.search-btn{padding:8px 18px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#1a1a2e;font-size:14px;cursor:pointer;font-family:inherit;font-weight:600;transition:all .2s;white-space:nowrap}
+.search-btn:hover{box-shadow:0 4px 16px rgba(212,168,83,.3)}
+.search-clear{background:transparent;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:0 6px}
+.search-results{display:none;margin-top:8px}
+.search-results.show{display:block}
+.search-result-card{background:var(--card);border-radius:12px;padding:14px 16px;margin-bottom:8px;border:1px solid rgba(255,255,255,.04);cursor:pointer;transition:all .15s;border-left:3px solid var(--gold-dim)}
+.search-result-card:hover{background:var(--card-hover);border-color:rgba(212,168,83,.15)}
+.search-result-card .src-subject{font-size:11px;color:var(--gold);margin-bottom:4px}
+.search-result-card .src-stem{font-size:14px;font-weight:600;line-height:1.7;margin-bottom:6px;color:var(--text)}
+.search-result-card .src-opts{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--text-dim);line-height:1.5}
+.search-result-card .src-id{font-size:11px;color:#555;margin-top:4px}
+.search-result-card .src-match{background:rgba(212,168,83,.2);color:var(--gold);font-weight:700;padding:0 2px;border-radius:2px}
+.search-empty{margin-top:12px;padding:40px;text-align:center;color:var(--text-dim);font-size:14px}
+
 /* ─── Random settings ─── */
 .random-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px;padding:14px 18px;background:rgba(0,212,255,.04);border-radius:10px;border:1px solid rgba(0,212,255,.1)}
 .random-bar .label{font-size:13px;color:var(--text-dim)}
@@ -176,6 +200,17 @@ body{font-family:-apple-system,'PingFang SC','Microsoft YaHei','Helvetica Neue',
   <div class="page active" id="pageHome">
     <h2 style="font-size:22px;font-weight:700;margin-bottom:8px">选择科目</h2>
     <p style="font-size:13px;color:var(--text-dim);margin-bottom:24px">选择一个科目开始刷题，进度自动保存</p>
+    <!-- ═══ Search ═══ -->
+    <div class="search-area" id="searchArea">
+      <div class="search-tabs" id="searchTabs"></div>
+      <div class="search-bar">
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索题干或选项内容…" onkeydown="if(event.key==='Enter') doSearch()">
+        <button class="search-btn" onclick="doSearch()">🔍 搜索</button>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
     <div class="subjects" id="subjectGrid"></div>
   </div>
 
@@ -374,6 +409,7 @@ function init() {
   renderStats();
   renderWrong();
   renderBookmarks();
+  initSearch();
 
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
@@ -650,6 +686,127 @@ function shuffle(arr) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// Search
+// ═══════════════════════════════════════════════════════════
+
+var searchSubjectId = null;
+
+function initSearch() {
+  var tabs = document.getElementById('searchTabs');
+  var html = '';
+  for (var i = 0; i < DATA.length; i++) {
+    html += '<button class="search-tab" data-id="' + DATA[i].id + '" onclick="switchSearchTab(\'' + DATA[i].id + '\')">' + DATA[i].name + '</button>';
+  }
+  tabs.innerHTML = html;
+  switchSearchTab(DATA[0].id);
+}
+
+function switchSearchTab(id) {
+  searchSubjectId = id;
+  var tabs = document.querySelectorAll('.search-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].dataset.id === id);
+  }
+  var kw = document.getElementById('searchInput').value.trim();
+  if (kw) doSearch();
+}
+
+function doSearch() {
+  var kw = document.getElementById('searchInput').value.trim();
+  if (!kw || !searchSubjectId) { document.getElementById('searchResults').classList.remove('show'); return; }
+
+  var subj = null;
+  for (var i = 0; i < DATA.length; i++) {
+    if (DATA[i].id === searchSubjectId) { subj = DATA[i]; break; }
+  }
+  if (!subj) return;
+
+  var results = [];
+  for (var i = 0; i < subj.questions.length; i++) {
+    var q = subj.questions[i];
+    if (q.stem.indexOf(kw) !== -1) {
+      results.push({ q: q, idx: i, matchIn: 'stem' });
+    } else if (q.options.some(function(o) { return o.indexOf(kw) !== -1; })) {
+      results.push({ q: q, idx: i, matchIn: 'options' });
+    }
+  }
+  renderSearchResults(results, kw);
+}
+
+function renderSearchResults(results, kw) {
+  var div = document.getElementById('searchResults');
+  var clearBtn = document.getElementById('searchClear');
+
+  if (results.length === 0) {
+    div.innerHTML = '<div class="search-empty">😕 没找到匹配的题目，换个关键词试试</div>';
+    div.classList.add('show');
+    clearBtn.style.display = 'inline-block';
+    return;
+  }
+
+  var letters = 'ABCDEFGH';
+  var subjName = '';
+  for (var i = 0; i < DATA.length; i++) {
+    if (DATA[i].id === searchSubjectId) { subjName = DATA[i].name; break; }
+  }
+
+  var html = '';
+  for (var i = 0; i < results.length; i++) {
+    var r = results[i];
+    var stemHL = highlightMatch(r.q.stem, kw);
+    var optsHtml = '';
+    var max = r.q.options.length > 4 ? 4 : r.q.options.length;
+    for (var j = 0; j < max; j++) {
+      var optText = r.matchIn === 'options' ? highlightMatch(r.q.options[j], kw) : r.q.options[j];
+      optsHtml += '<span>' + letters[j] + '. ' + optText + '</span>';
+    }
+    var ellipsis = r.q.options.length > 4 ? '<span style="color:#555">…</span>' : '';
+    var section = r.q.section || subjName;
+
+    html += '<div class="search-result-card" onclick="navigateToSearch(\'' + searchSubjectId + '\', ' + r.idx + ')">'
+      + '<div class="src-subject">' + section + ' · 第' + r.q.id + '题</div>'
+      + '<div class="src-stem">' + stemHL + '</div>'
+      + '<div class="src-opts">' + optsHtml + ellipsis + '</div>'
+      + '<div class="src-id">' + (r.matchIn === 'stem' ? '📝 题干匹配' : '✅ 选项匹配') + '</div>'
+      + '</div>';
+  }
+  div.innerHTML = html;
+  div.classList.add('show');
+  clearBtn.style.display = 'inline-block';
+}
+
+function highlightMatch(text, kw) {
+  if (!kw) return text;
+  var esc = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  var parts = esc.split(' ');
+  var re = new RegExp('(' + parts.join('|') + ')', 'gi');
+  return text.replace(re, '<span class="src-match">$1</span>');
+}
+
+function navigateToSearch(subjectId, idx) {
+  var subj = null;
+  for (var i = 0; i < DATA.length; i++) {
+    if (DATA[i].id === subjectId) { subj = DATA[i]; break; }
+  }
+  if (!subj) return;
+  currentSubject = subj;
+  currentIndex = idx;
+  currentQuestions = subj.questions;
+  isRandom = false;
+  document.getElementById('randomBar').style.display = 'none';
+  showPage('quiz');
+  showQuestion();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').classList.remove('show');
+  document.getElementById('searchClear').style.display = 'none';
+  document.getElementById('searchInput').focus();
+}
+
+// ═══════════════════════════════════════════════════════════
+
 // Progress Saving
 // ═══════════════════════════════════════════════════════════
 function saveAnswer(q, correct, letter) {
